@@ -1,4 +1,4 @@
-# food_ordering_app
+# mobile_app
 
 A new Flutter project.
 
