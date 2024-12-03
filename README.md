@@ -1,3 +1,10 @@
+How to clone:
+1. Copy command 'git clone https://github.com/KXWong007/FYP-MobileApp.git' (without quotation marks)
+2. Use Command Prompt or Terminal in VS Code, change folder directory to an empty folder.
+3. Paste and run in terminal.
+
+===============================================================================================================================================================================================================================================================================
+
 # mobile_app
 
 A new Flutter project.
