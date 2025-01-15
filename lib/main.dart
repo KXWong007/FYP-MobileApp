@@ -54,7 +54,7 @@ class LoginPage extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Center(
           child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 30),
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: 400),
                 child: Column(
@@ -68,48 +68,72 @@ class LoginPage extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Welcome',
+                        'Welcome back you\'ve been missed',
                         style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Text(
-                        'Sign in to your account',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[700],
+                          fontSize: 16,
+                          
                         ),
                       ),
                     ),
                     Container(
                         padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: TextField(
-                          controller: _memberIdController,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16.0),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16.0),
+                            boxShadow: [
+                              BoxShadow(
+                                offset: Offset(3, 3),
+                                blurRadius: 6,
+                                color: Colors.grey.shade400,
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: _memberIdController,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16.0),
+                                borderSide: BorderSide.none, // Remove border line
+                              ),
+                              labelText: 'Member ID',
+                              prefixIcon: Icon(
+                                Icons.person_outline_rounded,
+                              ),
                             ),
-                            labelText: 'Member ID',
                           ),
                         )),
                     Container(
                         padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: TextField(
-                          controller: _passwordController,
-                          onTap: () {},
-                          cursorColor: Color(0xff262626),
-                          obscureText: true,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16.0),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16.0),
+                            boxShadow: [
+                              BoxShadow(
+                                offset: Offset(3, 3),
+                                blurRadius: 6,
+                                color: Colors.grey.shade400,
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: _passwordController,
+                            obscureText: true,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16.0),
+                                borderSide: BorderSide.none, // Remove border line
+                              ),
+                              labelText: 'Password',
+                              prefixIcon: Icon(
+                                Icons.lock_outline_rounded,
+                              ),
                             ),
-                            labelText: 'Password',
                           ),
                         )),
+
                     Container(
                         height: 80,
                         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -182,13 +206,13 @@ class LoginPage extends StatelessWidget {
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Server error: ${response.statusCode}')),
+          SnackBar(content: Text('Your Member ID or Password is incorrect')),
         );
       }
     } catch (e) {
       print('Error details: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Connection error: $e')),
+        SnackBar(content: Text('Your Member ID or Password is incorrect')),
       );
     }
   }
@@ -198,12 +222,22 @@ class MainMenuPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           Container(
             height: 50,
-            color: Color(0xffe6be8a),
             width: double.infinity,
+            decoration: BoxDecoration(
+              color: Color(0xffe6be8a),
+              boxShadow: [
+                BoxShadow(
+                  offset: Offset(0, 3),  // Shadow goes downward
+                  blurRadius: 6,
+                  color: Colors.grey.shade400,
+                ),
+              ],
+            ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 20),
@@ -362,8 +396,17 @@ class MainMenuPage extends StatelessWidget {
           ),
           Container(
             height: 50,
-            color: Color(0xffe6be8a),
             width: double.infinity,
+            decoration: BoxDecoration(
+              color: Color(0xffe6be8a),
+              boxShadow: [
+                BoxShadow(
+                  offset: Offset(0, -3),  // Shadow goes upward
+                  blurRadius: 6,
+                  color: Colors.grey.shade400,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -448,16 +491,29 @@ class _TableReservationPageState extends State<TableReservationPage> {
     if (selectedDate == null) return true;
 
     final now = DateTime.now().toUtc().add(malaysiaTimeZoneOffset);
-    if (isSameDay(selectedDate!, now)) {
-      final currentTime = TimeOfDay.fromDateTime(now);
-      // Convert both times to minutes for easier comparison
-      final selectedMinutes = time.hour * 60 + time.minute;
-      final currentMinutes = currentTime.hour * 60 + currentTime.minute;
-
-      // Add buffer time (e.g., 30 minutes from now)
-      return selectedMinutes >= (currentMinutes + 30);
+    final currentTimeOfDay = TimeOfDay.fromDateTime(now);
+    
+    // If current time is past 10 PM, only allow future dates
+    if (currentTimeOfDay.hour >= 22) {
+      if (!selectedDate!.isAfter(now.add(Duration(days: 1)).subtract(Duration(days: 1)))) {
+        return false;
+      }
     }
-    return true;
+    
+    // If selected date is today
+    if (isSameDay(selectedDate!, now)) {
+      // Convert both times to minutes for comparison
+      final selectedMinutes = time.hour * 60 + time.minute;
+      final currentMinutes = currentTimeOfDay.hour * 60 + currentTimeOfDay.minute;
+
+      // Check if time is within operating hours and at least 30 minutes from now
+      return time.hour >= 8 && 
+             time.hour < 22 && 
+             selectedMinutes >= (currentMinutes + 30);
+    }
+    
+    // For future dates, just check operating hours
+    return time.hour >= 8 && time.hour < 22;
   }
 
   @override
@@ -466,18 +522,49 @@ class _TableReservationPageState extends State<TableReservationPage> {
     // Initialize Malaysia current time
     malaysiaCurrentTime = DateTime.now().toUtc().add(malaysiaTimeZoneOffset);
 
-    // Initialize with exact current Malaysia time
-    selectedTime = TimeOfDay.fromDateTime(malaysiaCurrentTime);
+    // Check if current time is past 10 PM
+    final currentTimeOfDay = TimeOfDay.fromDateTime(malaysiaCurrentTime);
+    if (currentTimeOfDay.hour >= 22) {
+      // Set selected date to tomorrow
+      selectedDate = malaysiaCurrentTime.add(Duration(days: 1));
+      _selectedDay = selectedDate;
+      _focusedDay = selectedDate!;
+      
+      // Set selected time to 8 AM
+      selectedTime = TimeOfDay(hour: 8, minute: 0);
+      _timeManuallySelected = true;
+    } else {
+      // Initialize with current time if within operating hours
+      selectedTime = TimeOfDay.fromDateTime(malaysiaCurrentTime);
+      if (selectedTime!.hour < 8) {
+        // If before 8 AM, set to 8 AM
+        selectedTime = TimeOfDay(hour: 8, minute: 0);
+        _timeManuallySelected = true;
+      }
+    }
 
-    // Start a timer to update the current time every minute
+    // Start timer for updates
     _timer = Timer.periodic(Duration(minutes: 1), (timer) {
       if (mounted) {
         setState(() {
-          malaysiaCurrentTime =
-              DateTime.now().toUtc().add(malaysiaTimeZoneOffset);
+          malaysiaCurrentTime = DateTime.now().toUtc().add(malaysiaTimeZoneOffset);
           // Only update selectedTime if it hasn't been manually changed by user
           if (!_timeManuallySelected) {
-            selectedTime = TimeOfDay.fromDateTime(malaysiaCurrentTime);
+            TimeOfDay currentTime = TimeOfDay.fromDateTime(malaysiaCurrentTime);
+            if (currentTime.hour >= 22) {
+              // If past 10 PM, set next day 8 AM
+              selectedDate = malaysiaCurrentTime.add(Duration(days: 1));
+              _selectedDay = selectedDate;
+              _focusedDay = selectedDate!;
+              selectedTime = TimeOfDay(hour: 8, minute: 0);
+              _timeManuallySelected = true;
+            } else if (currentTime.hour < 8) {
+              // If before 8 AM, set to 8 AM
+              selectedTime = TimeOfDay(hour: 8, minute: 0);
+              _timeManuallySelected = true;
+            } else {
+              selectedTime = currentTime;
+            }
           }
         });
       }
@@ -507,22 +594,42 @@ class _TableReservationPageState extends State<TableReservationPage> {
           ],
         ),
         child: TableCalendar(
-          firstDay: DateTime.now(),
+          firstDay: DateTime.now().subtract(Duration(days: 365)),
           lastDay: DateTime.now().add(Duration(days: 365)),
-          focusedDay: _focusedDay,
+          focusedDay: _focusedDay ?? DateTime.now(),
           calendarFormat: _calendarFormat,
+          enabledDayPredicate: _enabledDayPredicate(),
           selectedDayPredicate: (day) {
             return isSameDay(_selectedDay, day);
           },
           onDaySelected: (selectedDay, focusedDay) {
-            if (!isSameDay(_selectedDay, selectedDay)) {
-              setState(() {
-                _selectedDay = selectedDay;
-                _focusedDay = focusedDay;
-                selectedDate = selectedDay; // Update the selectedDate
-                print('Selected date: $selectedDate'); // Debug print
-              });
+            final now = DateTime.now().toUtc().add(malaysiaTimeZoneOffset);
+            final currentTimeOfDay = TimeOfDay.fromDateTime(now);
+
+            // If current time is past 10 PM and trying to select today or earlier
+            if (currentTimeOfDay.hour >= 22 && 
+                !selectedDay.isAfter(now.add(Duration(days: 1)).subtract(Duration(days: 1)))) {
+              // Show error message
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Please select a date from tomorrow onwards'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              return;
             }
+
+            setState(() {
+              _selectedDay = selectedDay;
+              selectedDate = selectedDay;
+              _focusedDay = focusedDay;
+              
+              // Reset time to 8 AM if selecting a future date
+              if (!isSameDay(selectedDay, now)) {
+                selectedTime = TimeOfDay(hour: 8, minute: 0);
+                _timeManuallySelected = true;
+              }
+            });
           },
           onFormatChanged: (format) {
             setState(() {
@@ -550,9 +657,44 @@ class _TableReservationPageState extends State<TableReservationPage> {
     );
   }
 
+  // Update the calendar's enabled day predicate
+  bool Function(DateTime) _enabledDayPredicate() {
+    return (day) {
+      final now = DateTime.now().toUtc().add(malaysiaTimeZoneOffset);
+      final currentTimeOfDay = TimeOfDay.fromDateTime(now);
+      
+      // If current time is past 10 PM
+      if (currentTimeOfDay.hour >= 22) {
+        // Only allow dates from tomorrow onwards
+        return day.isAfter(now.add(Duration(days: 1)).subtract(Duration(days: 1)));
+      }
+      
+      // Otherwise, only allow today and future dates
+      return !day.isBefore(now.subtract(Duration(days: 1)));
+    };
+  }
+
   // Time Picker Widget
   Widget _buildTimePicker() {
-    final currentTime = TimeOfDay.fromDateTime(malaysiaCurrentTime);
+    final now = DateTime.now().toUtc().add(malaysiaTimeZoneOffset);
+    final currentTimeOfDay = TimeOfDay.fromDateTime(now);
+    
+    // Determine initial time based on current time
+    TimeOfDay initialTime;
+    if (currentTimeOfDay.hour >= 21) {
+      // After 9 PM, set to 8:30 AM
+      initialTime = TimeOfDay(hour: 8, minute: 30);
+    } else if (currentTimeOfDay.hour < 8 || 
+              (currentTimeOfDay.hour == 8 && currentTimeOfDay.minute < 30)) {
+      // Before 8:30 AM, set to 8:30 AM
+      initialTime = TimeOfDay(hour: 8, minute: 30);
+    } else {
+      // During operating hours, use current time
+      initialTime = currentTimeOfDay;
+    }
+
+    // Use initialTime if selectedTime is not set
+    final displayTime = selectedTime ?? initialTime;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -573,10 +715,9 @@ class _TableReservationPageState extends State<TableReservationPage> {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                'Select Time',
+                'Select Time (8:30 AM - 9:00 PM)',
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
@@ -584,13 +725,15 @@ class _TableReservationPageState extends State<TableReservationPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _buildTimeWheel(
-                  value: selectedTime?.hour ?? currentTime.hour,
+                  value: displayTime.hour,
                   maxValue: 23,
                   onChanged: (value) {
                     _timeManuallySelected = true;
                     final newTime = TimeOfDay(
                       hour: value,
-                      minute: selectedTime?.minute ?? currentTime.minute,
+                      minute: value == 8 ? 30 : // Force 30 minutes for 8 AM
+                             value == 21 ? 0 :  // Force 0 minutes for 9 PM
+                             displayTime.minute,
                     );
                     if (isTimeValid(newTime)) {
                       setState(() {
@@ -599,8 +742,7 @@ class _TableReservationPageState extends State<TableReservationPage> {
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(
-                              'Please select a time at least 30 minutes from now'),
+                          content: Text('Please select a valid time between 8:30 AM and 9:00 PM'),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -619,13 +761,15 @@ class _TableReservationPageState extends State<TableReservationPage> {
                   ),
                 ),
                 _buildTimeWheel(
-                  value: selectedTime?.minute ?? currentTime.minute,
+                  value: displayTime.minute,
                   maxValue: 59,
                   onChanged: (value) {
                     _timeManuallySelected = true;
                     final newTime = TimeOfDay(
-                      hour: selectedTime?.hour ?? currentTime.hour,
-                      minute: value,
+                      hour: displayTime.hour,
+                      minute: displayTime.hour == 8 ? (value < 30 ? 30 : value) : // Minimum 30 for 8 AM
+                             displayTime.hour == 21 ? 0 :              // Always 0 for 9 PM
+                             value,
                     );
                     if (isTimeValid(newTime)) {
                       setState(() {
@@ -634,8 +778,7 @@ class _TableReservationPageState extends State<TableReservationPage> {
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(
-                              'Please select a time at least 30 minutes from now'),
+                          content: Text('Please select a valid time between 8:30 AM and 9:00 PM'),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -656,7 +799,6 @@ class _TableReservationPageState extends State<TableReservationPage> {
     required Function(int) onChanged,
   }) {
     final currentTime = TimeOfDay.fromDateTime(malaysiaCurrentTime);
-    final currentTotalMinutes = currentTime.hour * 60 + currentTime.minute;
 
     return Container(
       height: 150,
@@ -669,84 +811,109 @@ class _TableReservationPageState extends State<TableReservationPage> {
         onSelectedItemChanged: (index) {
           // For hours wheel
           if (maxValue == 23) {
-            final newTotalMinutes = index * 60 + (selectedTime?.minute ?? 0);
-            if (selectedDate == null ||
-                !isSameDay(selectedDate!, malaysiaCurrentTime) ||
-                newTotalMinutes >= currentTotalMinutes) {
-              onChanged(index);
-            } else {
-              // Bounce back to current hour if trying to select past time
+            final actualHour = index + 8; // Convert index to actual hour (8-21)
+            if (actualHour > 21) {  // Prevent selecting hours after 9 PM
+              return;
+            }
+            
+            if (actualHour == 8 && (selectedTime?.minute ?? 0) < 30) {
+              // If selecting 8 AM, ensure minutes are at least 30
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                (context as Element).markNeedsBuild();
                 setState(() {
-                  selectedTime = TimeOfDay(
-                    hour: currentTime.hour,
-                    minute: selectedTime?.minute ?? currentTime.minute,
-                  );
+                  selectedTime = TimeOfDay(hour: 8, minute: 30);
                 });
               });
+            } else if (actualHour == 21 && (selectedTime?.minute ?? 0) > 0) {
+              // If selecting 9 PM, ensure minutes are 0
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                setState(() {
+                  selectedTime = TimeOfDay(hour: 21, minute: 0);
+                });
+              });
+            } else {
+              onChanged(actualHour);
             }
           }
           // For minutes wheel
           else {
-            if (selectedDate == null ||
-                !isSameDay(selectedDate!, malaysiaCurrentTime)) {
-              onChanged(index);
-            } else if (selectedTime?.hour == currentTime.hour) {
-              if (index >= currentTime.minute) {
-                onChanged(index);
-              } else {
-                // Bounce back to current minute if trying to select past time
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  (context as Element).markNeedsBuild();
-                  setState(() {
-                    selectedTime = TimeOfDay(
-                      hour: selectedTime?.hour ?? currentTime.hour,
-                      minute: currentTime.minute,
-                    );
-                  });
+            final newTime = TimeOfDay(
+              hour: selectedTime?.hour ?? currentTime.hour,
+              minute: index,
+            );
+            
+            // Only restrict minutes for boundary hours (8 AM and 9 PM)
+            if (newTime.hour == 8 && index < 30) {
+              // If 8 AM, minimum minutes is 30
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                setState(() {
+                  selectedTime = TimeOfDay(hour: 8, minute: 30);
                 });
-              }
-            } else {
+              });
+              return;
+            } else if (newTime.hour == 21 && index > 0) {
+              // If 9 PM, only allow 00 minutes
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                setState(() {
+                  selectedTime = TimeOfDay(hour: 21, minute: 0);
+                });
+              });
+              return;
+            }
+            
+            // For all other hours, allow any minute
+            if (isTimeValid(newTime)) {
               onChanged(index);
             }
           }
         },
-        controller: FixedExtentScrollController(initialItem: value),
+        controller: FixedExtentScrollController(
+          initialItem: maxValue == 23 ? (value - 8) : value
+        ),
         childDelegate: ListWheelChildBuilderDelegate(
-          childCount: maxValue + 1,
+          childCount: maxValue == 23 ? 14 : 60, // 14 hours (8-21) or 60 minutes
           builder: (context, index) {
             bool isPastTime = false;
+            bool isInvalidTime = false;
+            final actualHour = maxValue == 23 ? index + 8 : selectedTime?.hour ?? 8;
+
+            // Check if time is invalid only for boundary hours
+            if (maxValue == 23) {
+              isInvalidTime = actualHour > 21;  // Gray out hours after 9 PM
+            } else {
+              isInvalidTime = (selectedTime?.hour == 8 && index < 30) || // Only gray out minutes before 30 for 8 AM
+                             (selectedTime?.hour == 21 && index > 0);    // Only gray out minutes after 00 for 9 PM
+            }
 
             // Check if this is a past time
             if (selectedDate != null &&
                 isSameDay(selectedDate!, malaysiaCurrentTime)) {
-              if (maxValue == 23) {
-                // Hours wheel
-                isPastTime = index < currentTime.hour;
-              } else {
-                // Minutes wheel
-                if (selectedTime?.hour == currentTime.hour) {
-                  isPastTime = index < currentTime.minute;
-                }
-              }
+              final currentMinutes = currentTime.hour * 60 + currentTime.minute;
+              final selectedMinutes = (selectedTime?.hour ?? actualHour) * 60 + 
+                                    (maxValue == 23 ? 0 : index);
+              
+              isPastTime = selectedMinutes < currentMinutes;
             }
 
             return Container(
               decoration: BoxDecoration(
-                color: value == index ? Color(0xFFF5F5F5) : Colors.transparent,
+                color: (maxValue == 23 ? index + 8 : index) == value 
+                    ? Color(0xFFF5F5F5) 
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Center(
                 child: Text(
-                  index.toString().padLeft(2, '0'),
+                  maxValue == 23 
+                      ? (index + 8).toString().padLeft(2, '0')
+                      : index.toString().padLeft(2, '0'),
                   style: TextStyle(
                     fontSize: 30,
-                    fontWeight:
-                        value == index ? FontWeight.bold : FontWeight.normal,
-                    color: isPastTime
-                        ? Colors.grey[300] // Gray out past times
-                        : value == index
+                    fontWeight: (maxValue == 23 ? index + 8 : index) == value 
+                        ? FontWeight.bold 
+                        : FontWeight.normal,
+                    color: isInvalidTime || isPastTime
+                        ? Colors.grey[300]
+                        : (maxValue == 23 ? index + 8 : index) == value
                             ? Colors.brown
                             : Colors.grey[400],
                   ),
@@ -776,15 +943,13 @@ class _TableReservationPageState extends State<TableReservationPage> {
         if (result['success'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: Text(
-                    'Reservation created successful, kindly go your email and confirm the reservation')),
+                content: Text('Reservation created. Please come to your appointment')),
           );
           Navigator.pop(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content:
-                    Text(result['message'] ?? 'Failed to create reservation')),
+                content: Text(result['message'] ?? 'Failed to create reservation')),
           );
         }
       } catch (e) {
@@ -802,128 +967,220 @@ class _TableReservationPageState extends State<TableReservationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 600),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Top Banner
-                Stack(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        toolbarHeight: 60,
+        backgroundColor: Color(0xffe6be8a),
+        centerTitle: true,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            color: Color(0xffe6be8a),
+            boxShadow: [
+              BoxShadow(
+                offset: Offset(0, 3),
+                blurRadius: 6,
+                color: Colors.grey.shade400,
+              ),
+            ],
+          ),
+        ),
+        title: Text(
+          'Book Reservation',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      offset: Offset(3, 3),
+                      blurRadius: 6,
+                      color: Colors.grey.shade400,
+                    ),
+                  ],
+                ),
+                child: _buildCalendar(),
+              ),
+              
+              SizedBox(height: 20),
+              
+              Container(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      offset: Offset(3, 3),
+                      blurRadius: 6,
+                      color: Colors.grey.shade400,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    _buildTimePicker(),
+                  ],
+                ),
+              ),
+              
+              SizedBox(height: 20),
+              
+              Container(
+                width: double.infinity,
+                constraints: BoxConstraints(maxWidth: 600),
+                child: Column(
                   children: [
                     Container(
-                      height: 60,
-                      color: Color(0xffe6be8a),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'Table Reservation',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16.0),
+                        boxShadow: [
+                          BoxShadow(
+                            offset: Offset(3, 3),
+                            blurRadius: 6,
+                            color: Colors.grey.shade400,
+                          ),
+                        ],
+                      ),
+                      child: DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          labelText: 'Area',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none, // Remove border line
+                          ),
                         ),
+                        items: [
+                          DropdownMenuItem(
+                            value: 'The Hornbill Restaurant (Chinese)',
+                            child: Text('The Hornbill Restaurant (Chinese)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'The Rajah Room (Western)',
+                            child: Text('The Rajah Room (Western)'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedArea = value;
+                          });
+                        },
                       ),
                     ),
-                    Positioned(
-                      left: 10,
-                      top: 10,
-                      child: IconButton(
-                        icon: Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () {
-                          Navigator.pop(context);
+                    SizedBox(height: 16),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16.0),
+                        boxShadow: [
+                          BoxShadow(
+                            offset: Offset(3, 3),
+                            blurRadius: 6,
+                            color: Colors.grey.shade400,
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'Pax',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none, // Remove border line
+                          ),
+                          hintText: 'Enter number of people',
+                        ),
+                        onChanged: (value) {
+                          if (value.isNotEmpty) {
+                            final number = int.tryParse(value);
+                            if (number != null && number > 0) {
+                              setState(() {
+                                pax = number;
+                              });
+                            }
+                          }
                         },
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 20),
-                _buildCalendar(),
-                _buildTimePicker(),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: DropdownButtonFormField<String>(
-                    decoration: InputDecoration(
-                      labelText: 'Area',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
+              ),
+              
+              SizedBox(height: 20),
+
+              Container(
+                width: double.infinity,
+                constraints: BoxConstraints(maxWidth: 600),
+                child: ElevatedButton(
+                  onPressed: _bookNow,
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Color(0xffe6be8a),
+                    padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Book Now',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+
+              SizedBox(height: 20),
+
+              Container(
+                width: double.infinity,
+                alignment: Alignment.center,
+                child: Column(
+                  children: [
+                    Text(
+                      'Want to book an event?',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.brown,
                       ),
                     ),
-                    items: [
-                      DropdownMenuItem(
-                        value: 'The Hornbill Restaurant (Chinese)',
-                        child: Text('The Hornbill Restaurant (Chinese)'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'The Rajah Room (Western)',
-                        child: Text('The Rajah Room (Western)'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        selectedArea = value;
-                      });
-                    },
-                  ),
-                ),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: TextFormField(
-                    decoration: InputDecoration(
-                      labelText: 'Pax',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
+                    Text(
+                      'Call 0123456789',
+                      style: TextStyle(
+                        fontSize: 17,
+                        color: Colors.grey[700],
                       ),
                     ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) {
-                      setState(() {
-                        pax = int.tryParse(value);
-                      });
-                    },
-                  ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    children: [
-                      Text('Want to book for an event?'),
-                      Text('Call: 012-3456789'),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 20), // Added spacing
-              ],
-            ),
-          ),
-        ),
-      ),
-      bottomNavigationBar: Container(
-        height: 60,
-        color: Color(0xffe6be8a),
-        child: Center(
-          child: ElevatedButton(
-            onPressed: _bookNow,
-            style: ElevatedButton.styleFrom(
-              foregroundColor: Color(0xffe6be8a),
-              backgroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 40, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(50),
               ),
-            ),
-            child: Text(
-              'Book Now',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xffe6be8a),
-              ),
-            ),
+              SizedBox(height: 20),
+
+              
+            ],
           ),
         ),
       ),
@@ -941,15 +1198,16 @@ class _ReservationListPageState extends State<ReservationListPage> {
   bool isLoading = true;
   String? error;
   String currentFilter = 'upcoming';
-  Timer? _refreshTimer; // Add timer variable
+  Timer? _refreshTimer;
+  final Duration malaysiaTimeZoneOffset = const Duration(hours: 8);
 
   @override
   void initState() {
     super.initState();
     fetchReservations();
-    // Set up periodic refresh every 30 seconds
+    // Set up periodic refresh
     _refreshTimer = Timer.periodic(Duration(seconds: 2), (timer) {
-      if (mounted) {
+      if (mounted) {  // Check if widget is still mounted
         fetchReservations();
       }
     });
@@ -957,11 +1215,13 @@ class _ReservationListPageState extends State<ReservationListPage> {
 
   @override
   void dispose() {
-    _refreshTimer?.cancel(); // Cancel timer when disposing
+    _refreshTimer?.cancel();  // Cancel timer when disposing
     super.dispose();
   }
 
   Future<void> fetchReservations() async {
+    if (!mounted) return;  // Add this check at the start of the method
+    
     try {
       // Don't show loading indicator for automatic refreshes
       if (isLoading) {
@@ -981,6 +1241,8 @@ class _ReservationListPageState extends State<ReservationListPage> {
         },
       );
 
+      if (!mounted) return;  // Add this check before setState
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
@@ -992,7 +1254,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
           throw Exception(data['message'] ?? 'Failed to fetch reservations');
         }
       } else {
-        throw Exception('Server error: ${response.statusCode}');
+        throw Exception('Server error! Contact admin for assistance');
       }
     } catch (e) {
       setState(() {
@@ -1017,7 +1279,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
       switch (currentFilter) {
         case 'upcoming':
           return date.isAfter(now) &&
-              ['confirm', 'firstc', 'secondc', 'thirdc'].contains(status);
+              ['confirm'].contains(status);
         case 'completed':
           return date.isBefore(now) && status == 'completed';
         case 'cancelled':
@@ -1090,7 +1352,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
           throw Exception(data['message'] ?? 'Failed to cancel reservation');
         }
       } else {
-        throw Exception('Server error: ${response.statusCode}');
+        throw Exception('Server error! Contact admin for assistance');
       }
     } catch (e) {
       // Hide loading dialog if error occurs
@@ -1111,6 +1373,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: 600),
@@ -1121,7 +1384,16 @@ class _ReservationListPageState extends State<ReservationListPage> {
                 children: [
                   Container(
                     height: 60,
-                    color: Color(0xffe6be8a),
+                    decoration: BoxDecoration(
+                      color: Color(0xffe6be8a),
+                      boxShadow: [
+                        BoxShadow(
+                          offset: Offset(0, 3),
+                          blurRadius: 6,
+                          color: Colors.grey.shade400,
+                        ),
+                      ],
+                    ),
                     alignment: Alignment.center,
                     child: Text(
                       'Reservation List',
@@ -1138,7 +1410,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
                     child: IconButton(
                       icon: Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () {
-                        Navigator.pop(context); // Navigate back to Main Menu
+                        Navigator.pop(context);
                       },
                     ),
                   ),
@@ -1155,11 +1427,11 @@ class _ReservationListPageState extends State<ReservationListPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildNavigationButton(
-                        context, 'Upcoming', Colors.blue, 'upcoming'),
+                        context, 'Upcoming', Color(0xffe6be8a), 'upcoming'),
                     _buildNavigationButton(
-                        context, 'Completed', Colors.green, 'completed'),
+                        context, 'Completed', Color(0xffe6be8a), 'completed'),
                     _buildNavigationButton(
-                        context, 'Cancelled', Colors.red, 'cancelled'),
+                        context, 'Cancelled', Color(0xffe6be8a), 'cancelled'),
                   ],
                 ),
               ),
@@ -1174,44 +1446,81 @@ class _ReservationListPageState extends State<ReservationListPage> {
                       ? Center(child: CircularProgressIndicator())
                       : error != null
                           ? Center(child: Text(error!))
-                          : ListView.builder(
-                              physics:
-                                  AlwaysScrollableScrollPhysics(), // Enable scrolling
-                              padding: EdgeInsets.symmetric(horizontal: 20),
-                              itemCount: getFilteredReservations().length,
-                              itemBuilder: (context, index) {
-                                final reservation =
-                                    getFilteredReservations()[index];
-                                final date = DateTime.parse(
-                                    reservation['reservationDate']);
+                          : getFilteredReservations().isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.calendar_today,
+                                        size: 64,
+                                        color: Color(0xffe6be8a),
+                                      ),
+                                      SizedBox(height: 16),
+                                      Text(
+                                        currentFilter == 'upcoming' 
+                                            ? 'No Upcoming Reservations'
+                                            : currentFilter == 'completed'
+                                                ? 'No Completed Reservations'
+                                                : 'No Cancelled Reservations',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          color: Color(0xffe6be8a),
+                                          // fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      SizedBox(height: 8),
+                                    ],
+                                  ),
+                                )
+                              : ListView.builder(
+                                  physics:
+                                      AlwaysScrollableScrollPhysics(), // Enable scrolling
+                                  padding: EdgeInsets.symmetric(horizontal: 20),
+                                  itemCount: getFilteredReservations().length,
+                                  itemBuilder: (context, index) {
+                                    final reservation =
+                                        getFilteredReservations()[index];
+                                    final date = DateTime.parse(
+                                        reservation['reservationDate']);
 
-                                return _buildReservationCard(
-                                  status:
-                                      _getStatusText(reservation['rstatus']),
-                                  reservationId: reservation['reservationId'],
-                                  pax: reservation['pax'].toString(),
-                                  area: _getAreaText(reservation['rarea']),
-                                  date: DateFormat('yyyy-MM-dd').format(date),
-                                  time: DateFormat('HH:mm').format(date),
-                                  buttonColor: _getActionButtonColor(
-                                      reservation['rstatus']),
-                                  buttonText: _getActionButtonText(
-                                      reservation['rstatus']),
-                                  buttonAction:
-                                      reservation['rstatus'] == 'confirm'
-                                          ? () => cancelReservation(
-                                              reservation['reservationId'])
-                                          : null,
-                                );
-                              },
-                            ),
+                                    return _buildReservationCard(
+                                      status:
+                                          _getStatusText(reservation['rstatus']),
+                                      reservationId: reservation['reservationId'],
+                                      pax: reservation['pax'].toString(),
+                                      area: _getAreaText(reservation['rarea']),
+                                      date: DateFormat('yyyy-MM-dd').format(date),
+                                      time: DateFormat('HH:mm').format(date),
+                                      buttonColor: _getActionButtonColor(
+                                          reservation['rstatus']),
+                                      buttonText: _getActionButtonText(
+                                          reservation['rstatus']),
+                                      buttonAction:
+                                          reservation['rstatus'] == 'confirm'
+                                              ? () => cancelReservation(
+                                                  reservation['reservationId'])
+                                              : null,
+                                    );
+                                  },
+                                ),
                 ),
               ),
 
               // Bottom Banner
               Container(
                 height: 50,
-                color: Color(0xffe6be8a),
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Color(0xffe6be8a),
+                  boxShadow: [
+                    BoxShadow(
+                      offset: Offset(0, -3),
+                      blurRadius: 6,
+                      color: Colors.grey.shade400,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -1224,11 +1533,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
   String _getStatusText(String status) {
     switch (status.toLowerCase()) {
       case 'confirm':
-        return 'Booking Confirmed';
-      case 'firstc':
-      case 'secondc':
-      case 'thirdc':
-        return 'Pending Confirmation';
+        return 'Upcoming';
       case 'cancel':
         return 'Cancelled';
       case 'completed':
@@ -1252,11 +1557,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
   Color _getActionButtonColor(String status) {
     switch (status.toLowerCase()) {
       case 'confirm':
-        return Colors.red; // Cancel button
-      case 'firstc':
-      case 'secondc':
-      case 'thirdc':
-        return Colors.grey; // Pending
+        return Color(0xffe6be8a); // Cancel button
       default:
         return Colors.grey;
     }
@@ -1266,10 +1567,6 @@ class _ReservationListPageState extends State<ReservationListPage> {
     switch (status.toLowerCase()) {
       case 'confirm':
         return 'Cancel';
-      case 'firstc':
-      case 'secondc':
-      case 'thirdc':
-        return 'Waiting for confirmation...';
       case 'cancel':
         return 'Cancelled';
       case 'completed':
@@ -1286,25 +1583,42 @@ class _ReservationListPageState extends State<ReservationListPage> {
     Color color,
     String filter,
   ) {
+    final bool isSelected = currentFilter == filter;
+    
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 5),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor:
-                currentFilter == filter ? color : color.withOpacity(0.6),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                offset: Offset(3, 3),
+                blurRadius: 6,
+                color: Colors.grey.shade400,
+              ),
+            ],
           ),
-          onPressed: () {
-            setState(() {
-              currentFilter = filter;
-            });
-          },
-          child: Text(
-            label,
-            style: TextStyle(color: Colors.white),
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isSelected ? color : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0, // Remove default button elevation
+            ),
+            onPressed: () {
+              setState(() {
+                currentFilter = filter;
+              });
+            },
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : color,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ),
       ),
@@ -1323,31 +1637,65 @@ class _ReservationListPageState extends State<ReservationListPage> {
     required String buttonText,
     VoidCallback? buttonAction,
   }) {
+    // Check if reservation is today and before 9 PM
+    final reservationDateTime = DateTime.parse('$date $time');
+    final now = DateTime.now().toUtc().add(malaysiaTimeZoneOffset);
+    final isToday = isSameDay(reservationDateTime, now);
+    final reservationTimeOfDay = TimeOfDay.fromDateTime(reservationDateTime);
+    final isBefore9PM = reservationTimeOfDay.hour < 21 || 
+                       (reservationTimeOfDay.hour == 21 && reservationTimeOfDay.minute == 0);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.grey[100],
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey),
+          boxShadow: [
+            BoxShadow(
+              offset: Offset(3, 3),
+              blurRadius: 6,
+              color: Colors.grey.shade400,
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Status Text
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  status,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: _getStatusColor(status),
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      status,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xffe6be8a),
+                      ),
+                    ),
+                    if (status == 'Upcoming' && isToday && isBefore9PM) ...[
+                      SizedBox(width: 8),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Color(0xffe6be8a),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Text(
+                          'Today',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                // Add Reservation ID
                 Text(
                   'Reservation ID: $reservationId',
                   style: TextStyle(
@@ -1362,7 +1710,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
             // Booking Details
             Row(
               children: [
-                Icon(Icons.people, color: Colors.grey),
+                Icon(Icons.people, color: Color(0xffe6be8a)),
                 SizedBox(width: 5),
                 Text('Pax: $pax', style: TextStyle(fontSize: 16)),
               ],
@@ -1370,7 +1718,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
             SizedBox(height: 5),
             Row(
               children: [
-                Icon(Icons.location_on, color: Colors.grey),
+                Icon(Icons.location_on, color: Color(0xffe6be8a)),
                 SizedBox(width: 5),
                 Text('Area: $area', style: TextStyle(fontSize: 16)),
               ],
@@ -1378,7 +1726,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
             SizedBox(height: 5),
             Row(
               children: [
-                Icon(Icons.calendar_today, color: Colors.grey),
+                Icon(Icons.calendar_today, color: Color(0xffe6be8a)),
                 SizedBox(width: 5),
                 Text('Date: $date', style: TextStyle(fontSize: 16)),
               ],
@@ -1386,7 +1734,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
             SizedBox(height: 5),
             Row(
               children: [
-                Icon(Icons.access_time, color: Colors.grey),
+                Icon(Icons.access_time, color: Color(0xffe6be8a)),
                 SizedBox(width: 5),
                 Text('Time: $time', style: TextStyle(fontSize: 16)),
               ],
@@ -1394,55 +1742,23 @@ class _ReservationListPageState extends State<ReservationListPage> {
 
             SizedBox(height: 15),
 
-            // Conditional rendering based on status
-            if (status == 'Pending Confirmation')
-              // Row with reminder text and button for pending confirmation
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Kindly check your email for reservation confirmation',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: buttonAction,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: buttonColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: Text(
-                      buttonText,
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              )
-            else
-              // Only button aligned to the right for other statuses
-              Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton(
-                  onPressed: buttonAction,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: buttonColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text(
-                    buttonText,
-                    style: TextStyle(color: Colors.white),
+            // Corrected button styling
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton(
+                onPressed: buttonAction,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: buttonColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
+                child: Text(
+                  buttonText,
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
+            ),
           ],
         ),
       ),
@@ -1452,16 +1768,14 @@ class _ReservationListPageState extends State<ReservationListPage> {
   // Function to get color based on status
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'Booking Confirmed':
-        return Colors.blue;
-      case 'Pending Confirmation':
-        return Colors.orange;
+      case 'Upcoming':
+        return Color(0xffe6be8a);
       case 'In Waiting List':
-        return Colors.grey;
+        return Color(0xffe6be8a);
       case 'Completed':
-        return Colors.green;
+        return Color(0xffe6be8a);
       case 'Cancelled':
-        return Colors.red;
+        return Color(0xffe6be8a);
       default:
         return Colors.black;
     }
