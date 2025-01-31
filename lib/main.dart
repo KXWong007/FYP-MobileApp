@@ -1279,7 +1279,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
       switch (currentFilter) {
         case 'upcoming':
           return date.isAfter(now) &&
-              ['confirm'].contains(status);
+              ['confirm', 'waitinglist'].contains(status);
         case 'completed':
           return date.isBefore(now) && status == 'completed';
         case 'cancelled':
@@ -1292,7 +1292,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
     // Sort the filtered list
     if (currentFilter == 'upcoming') {
       filtered.sort((a, b) {
-        // First sort by status (confirmed first)
+        // First sort by status (confirmed first, then waiting list)
         final statusA = a['rstatus'].toString().toLowerCase();
         final statusB = b['rstatus'].toString().toLowerCase();
 
@@ -1496,11 +1496,10 @@ class _ReservationListPageState extends State<ReservationListPage> {
                                           reservation['rstatus']),
                                       buttonText: _getActionButtonText(
                                           reservation['rstatus']),
-                                      buttonAction:
-                                          reservation['rstatus'] == 'confirm'
-                                              ? () => cancelReservation(
-                                                  reservation['reservationId'])
-                                              : null,
+                                      buttonAction: (reservation['rstatus'] == 'confirm' || 
+                                                    reservation['rstatus'] == 'waitinglist')  // Updated to match database
+                                                  ? () => cancelReservation(reservation['reservationId'])
+                                                  : null,
                                     );
                                   },
                                 ),
@@ -1538,6 +1537,8 @@ class _ReservationListPageState extends State<ReservationListPage> {
         return 'Cancelled';
       case 'completed':
         return 'Completed';
+      case 'waitinglist':  // Updated to match database
+        return 'In Waiting List';
       default:
         return 'Unknown Status';
     }
@@ -1557,7 +1558,8 @@ class _ReservationListPageState extends State<ReservationListPage> {
   Color _getActionButtonColor(String status) {
     switch (status.toLowerCase()) {
       case 'confirm':
-        return Color(0xffe6be8a); // Cancel button
+      case 'waitinglist':  // Updated to match database
+        return Color(0xffe6be8a);
       default:
         return Colors.grey;
     }
@@ -1566,6 +1568,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
   String _getActionButtonText(String status) {
     switch (status.toLowerCase()) {
       case 'confirm':
+      case 'waitinglist':  // Updated to match database
         return 'Cancel';
       case 'cancel':
         return 'Cancelled';
