@@ -65,240 +65,287 @@ class _MenuPageState extends State<MenuPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: SafeArea(
-          child: Consumer<MenuService>(
-            builder: (context, menuService, child) {
-              if (menuService.isLoading) {
-                return const Center(child: CircularProgressIndicator());
+      body: SafeArea(
+        child: Consumer<MenuService>(
+          builder: (context, menuService, child) {
+            if (menuService.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            // Filter the menu items
+            final filteredMenuItems =
+                menuService.getMenuItemsByArea(selectedArea).where((menuItem) {
+              bool matchesSearch = menuItem.dishName
+                  .toLowerCase()
+                  .contains(searchQuery.toLowerCase());
+              bool matchesCategory = selectedCategory == 'All' ||
+                  menuItem.category == selectedCategory;
+              bool matchesSubcategory = selectedSubcategory == 'All' ||
+                  menuItem.subcategory == selectedSubcategory;
+              bool matchesCuisine = selectedCuisine == 'All' ||
+                  menuItem.cuisine == selectedCuisine;
+
+              return matchesSearch &&
+                  matchesCategory &&
+                  matchesSubcategory &&
+                  matchesCuisine;
+            }).toList();
+
+            // Sort items by availability
+            filteredMenuItems.sort((a, b) {
+              if (a.availability && !b.availability) {
+                return -1;
+              } else if (!a.availability && b.availability) {
+                return 1;
               }
+              return 0;
+            });
 
-              // Filter the menu items
-              final filteredMenuItems = menuService
-                  .getMenuItemsByArea(selectedArea)
-                  .where((menuItem) {
-                bool matchesSearch = menuItem.dishName
-                    .toLowerCase()
-                    .contains(searchQuery.toLowerCase());
-                bool matchesCategory = selectedCategory == 'All' ||
-                    menuItem.category == selectedCategory;
-                bool matchesSubcategory = selectedSubcategory == 'All' ||
-                    menuItem.subcategory == selectedSubcategory;
-                bool matchesCuisine = selectedCuisine == 'All' ||
-                    menuItem.cuisine == selectedCuisine;
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final maxWidth =
+                    constraints.maxWidth > 500 ? 500.0 : constraints.maxWidth;
 
-                return matchesSearch &&
-                    matchesCategory &&
-                    matchesSubcategory &&
-                    matchesCuisine;
-              }).toList();
-
-              // Sort items by availability
-              filteredMenuItems.sort((a, b) {
-                if (a.availability && !b.availability) {
-                  return -1;
-                } else if (!a.availability && b.availability) {
-                  return 1;
-                }
-                return 0;
-              });
-
-              return Column(
-                children: [
-                  // Top Banner with Title and Back Button
-                  Stack(
-                    children: [
-                      Container(
-                        height: 60,
-                        color: Color(0xffe6be8a),
-                      ),
-                      Positioned(
-                        left: 10,
-                        top: 10,
-                        child: IconButton(
-                          icon: Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: () {
-                            Navigator.pop(
-                                context); // Navigate back to Main Menu
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Search Bar
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: TextField(
-                      onChanged: (value) => setState(() => searchQuery = value),
-                      decoration: const InputDecoration(
-                        labelText: 'Search',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.search),
-                      ),
-                    ),
-                  ),
-
-                  // Dropdown Filters: Area, Category, Subcategory, Cuisine
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Wrap(
-                      spacing: 16.0, // Horizontal space between filters
-                      runSpacing:
-                          16.0, // Vertical space between rows if filters wrap
+                return Column(
+                  children: [
+                    // Top Banner with Title and Back Button
+                    Stack(
                       children: [
-                        buildDropdown(
-                          label: "Areas:",
-                          value: selectedArea,
-                          onChanged: (newValue) {
-                            if (newValue != null) {
-                              setState(() {
-                                selectedArea = newValue;
-                              });
-                            }
-                          },
-                          items: [
-                            'All',
-                            'Main Hall',
-                            'Badger Bar',
-                            'Hornbill Restaurant',
-                            'Rajah Room'
-                          ],
+                        Container(
+                          height: constraints.maxWidth > 500 ? 80 : 60,
+                          color: const Color(0xffe6be8a),
+                          width:
+                              double.infinity, // Full width for responsiveness
+                          alignment: Alignment.center,
+                          child: Text(
+                            'Food Ordering',
+                            style: TextStyle(
+                              fontSize: constraints.maxWidth > 500 ? 30 : 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
-                        buildDropdown(
-                          label: "Categories:",
-                          value: selectedCategory,
-                          onChanged: (newValue) {
-                            if (newValue != null) {
-                              setState(() {
-                                selectedCategory = newValue;
-                              });
-                            }
-                          },
-                          items: ['All'] + menuService.categories,
-                        ),
-                        buildDropdown(
-                          label: "Subcategories:",
-                          value: selectedSubcategory,
-                          onChanged: (newValue) {
-                            if (newValue != null) {
-                              setState(() {
-                                selectedSubcategory = newValue;
-                              });
-                            }
-                          },
-                          items: ['All'] + menuService.subcategories,
-                        ),
-                        buildDropdown(
-                          label: "Cuisines:",
-                          value: selectedCuisine,
-                          onChanged: (newValue) {
-                            if (newValue != null) {
-                              setState(() {
-                                selectedCuisine = newValue;
-                              });
-                            }
-                          },
-                          items: ['All'] + menuService.cuisines,
+                        Positioned(
+                          left: 10,
+                          top: 10,
+                          child: IconButton(
+                            icon: const Icon(Icons.arrow_back,
+                                color: Colors.white),
+                            onPressed: () {
+                              Navigator.pop(
+                                  context); // Navigate back to Main Menu
+                            },
+                          ),
                         ),
                       ],
                     ),
-                  ),
 
-                  const SizedBox(height: 16),
-
-                  // Toggle View Button
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          "Menu Items",
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        IconButton(
-                          icon: Icon(isListView ? Icons.grid_view : Icons.list),
-                          onPressed: () =>
-                              setState(() => isListView = !isListView),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Menu Items
-                  Expanded(
-                    child: filteredMenuItems.isEmpty
-                        ? const Center(
-                            child: Text('No menu items available'),
-                          )
-                        : (isListView
-                            ? ListView.builder(
-                                itemCount: filteredMenuItems.length,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                itemBuilder: (context, index) {
-                                  final menu = filteredMenuItems[index];
-                                  return buildListTile(menu);
-                                },
-                              )
-                            : GridView.builder(
-                                padding: const EdgeInsets.all(16),
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  crossAxisSpacing: 16,
-                                  mainAxisSpacing: 16,
-                                  childAspectRatio: 3 / 4,
+                    // Main Content with Constrained Width
+                    Expanded(
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: maxWidth),
+                          child: Column(
+                            children: [
+                              // Search Bar
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: TextField(
+                                  onChanged: (value) =>
+                                      setState(() => searchQuery = value),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Search',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.search),
+                                  ),
                                 ),
-                                itemCount: filteredMenuItems.length,
-                                itemBuilder: (context, index) {
-                                  final menu = filteredMenuItems[index];
-                                  return buildGridTile(menu);
-                                },
-                              )),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
+                              ),
 
-        // Check Cart Button
-        bottomNavigationBar: Container(
-          height: 60,
-          color: const Color(0xffe6be8a),
-          child: Center(
+                              // Dropdown Filters: Area, Category, Subcategory, Cuisine
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Wrap(
+                                  spacing:
+                                      16.0, // Horizontal space between filters
+                                  runSpacing:
+                                      16.0, // Vertical space between rows if filters wrap
+                                  children: [
+                                    buildDropdown(
+                                      label: "Areas:",
+                                      value: selectedArea,
+                                      onChanged: (newValue) {
+                                        if (newValue != null) {
+                                          setState(() {
+                                            selectedArea = newValue;
+                                          });
+                                        }
+                                      },
+                                      items: [
+                                        'All',
+                                        'Main Hall',
+                                        'Badger Bar',
+                                        'Hornbill Restaurant',
+                                        'Rajah Room'
+                                      ],
+                                    ),
+                                    buildDropdown(
+                                      label: "Categories:",
+                                      value: selectedCategory,
+                                      onChanged: (newValue) {
+                                        if (newValue != null) {
+                                          setState(() {
+                                            selectedCategory = newValue;
+                                          });
+                                        }
+                                      },
+                                      items: ['All'] + menuService.categories,
+                                    ),
+                                    buildDropdown(
+                                      label: "Subcategories:",
+                                      value: selectedSubcategory,
+                                      onChanged: (newValue) {
+                                        if (newValue != null) {
+                                          setState(() {
+                                            selectedSubcategory = newValue;
+                                          });
+                                        }
+                                      },
+                                      items:
+                                          ['All'] + menuService.subcategories,
+                                    ),
+                                    buildDropdown(
+                                      label: "Cuisines:",
+                                      value: selectedCuisine,
+                                      onChanged: (newValue) {
+                                        if (newValue != null) {
+                                          setState(() {
+                                            selectedCuisine = newValue;
+                                          });
+                                        }
+                                      },
+                                      items: ['All'] + menuService.cuisines,
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // Toggle View Button
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      "Menu Items",
+                                      style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    IconButton(
+                                      icon: Icon(isListView
+                                          ? Icons.grid_view
+                                          : Icons.list),
+                                      onPressed: () => setState(
+                                          () => isListView = !isListView),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Menu Items
+                              Expanded(
+                                child: filteredMenuItems.isEmpty
+                                    ? const Center(
+                                        child: Text('No menu items available'),
+                                      )
+                                    : (isListView
+                                        ? ListView.builder(
+                                            itemCount: filteredMenuItems.length,
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 16),
+                                            itemBuilder: (context, index) {
+                                              final menu =
+                                                  filteredMenuItems[index];
+                                              return buildListTile(menu);
+                                            },
+                                          )
+                                        : GridView.builder(
+                                            padding: const EdgeInsets.all(16),
+                                            gridDelegate:
+                                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                              crossAxisCount: 2,
+                                              crossAxisSpacing: 16,
+                                              mainAxisSpacing: 16,
+                                              childAspectRatio: 3 / 4,
+                                            ),
+                                            itemCount: filteredMenuItems.length,
+                                            itemBuilder: (context, index) {
+                                              final menu =
+                                                  filteredMenuItems[index];
+                                              return buildGridTile(menu);
+                                            },
+                                          )),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        ),
+      ),
+
+      // Check Cart Button
+      bottomNavigationBar: LayoutBuilder(
+        builder: (context, constraints) {
+          return Container(
+            height: constraints.maxWidth > 500 ? 80 : 60,
+            color: const Color(0xffe6be8a),
+            child: Center(
               child: ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CartPage(
-                    tableNum: widget.tableNum,
-                    customerId: widget.customerId,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CartPage(
+                        tableNum: widget.tableNum,
+                        customerId: widget.customerId,
+                      ),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: const Color(0xffe6be8a),
+                  backgroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(50),
                   ),
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              foregroundColor: Color(0xffe6be8a),
-              backgroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 40, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(50),
+                child: const Text(
+                  'Check Cart',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xffe6be8a),
+                  ),
+                ),
               ),
             ),
-            child: const Text(
-              'Check Cart',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xffe6be8a),
-              ),
-            ),
-          )),
-        ));
+          );
+        },
+      ),
+    );
   }
 
   // Utility for building ListTile

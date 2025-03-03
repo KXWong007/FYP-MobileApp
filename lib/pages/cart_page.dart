@@ -123,154 +123,170 @@ class _CartPageState extends State<CartPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Your Cart'),
-      ),
-      body: Consumer<CartService>(
-        builder: (context, cartService, child) {
-          if (cartService.cartItems.isEmpty) {
-            return const Center(child: Text('Your cart is empty.'));
-          }
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text('Your Cart'),
+    ),
+    body: LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth > 500 ? 500.0 : constraints.maxWidth;
 
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  itemCount: cartService.cartItems.length,
-                  itemBuilder: (context, index) {
-                    final cartItem = cartService.cartItems[index];
+        return Consumer<CartService>(
+          builder: (context, cartService, child) {
+            if (cartService.cartItems.isEmpty) {
+              return const Center(child: Text('Your cart is empty.'));
+            }
 
-                    return Card(
-                      margin: const EdgeInsets.all(8),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(10),
-                        title: Text(cartItem.dishName),
-                        subtitle: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // Show remarks before price if they exist
-                            if (cartItem.remarks.isNotEmpty)
-                              Text(
-                                '${cartItem.remarks}',
-                                style: TextStyle(fontStyle: FontStyle.italic),
-                              ),
-                            Text('RM ${cartItem.price.toStringAsFixed(2)}'),
-                            Row(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.remove),
-                                  onPressed: () {
-                                    if (cartItem.quantity > 1) {
-                                      cartService.updateQuantity(
-                                          cartItem, cartItem.quantity - 1);
-                                    }
-                                  },
-                                ),
-                                Text(cartItem.quantity.toString()),
-                                IconButton(
-                                  icon: const Icon(Icons.add),
-                                  onPressed: () {
-                                    cartService.updateQuantity(
-                                        cartItem, cartItem.quantity + 1);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () {
-                            cartService.removeFromCart(cartItem);
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total: RM ${cartService.totalPrice.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          isCheckoutVisible =
-                              !isCheckoutVisible; // Toggle checkout visibility
-                        });
-                      },
-                      child: const Text('Proceed to Checkout'),
-                    ),
-                  ],
-                ),
-              ),
-              if (isCheckoutVisible) ...[
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Checkout Summary',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
+            return Column(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: Container(
+                      width: maxWidth,
+                      child: ListView.builder(
                         itemCount: cartService.cartItems.length,
                         itemBuilder: (context, index) {
                           final cartItem = cartService.cartItems[index];
-                          return Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                  '${cartItem.dishName} x${cartItem.quantity}'),
-                              Text('RM ${cartItem.price * cartItem.quantity}'),
-                            ],
+
+                          return Card(
+                            margin: const EdgeInsets.all(8),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.all(10),
+                              title: Text(cartItem.dishName),
+                              subtitle: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  if (cartItem.remarks.isNotEmpty)
+                                    Text(
+                                      '${cartItem.remarks}',
+                                      style: TextStyle(fontStyle: FontStyle.italic),
+                                    ),
+                                  Text('RM ${cartItem.price.toStringAsFixed(2)}'),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.remove),
+                                        onPressed: () {
+                                          if (cartItem.quantity > 1) {
+                                            cartService.updateQuantity(
+                                                cartItem, cartItem.quantity - 1);
+                                          }
+                                        },
+                                      ),
+                                      Text(cartItem.quantity.toString()),
+                                      IconButton(
+                                        icon: const Icon(Icons.add),
+                                        onPressed: () {
+                                          cartService.updateQuantity(
+                                              cartItem, cartItem.quantity + 1);
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () {
+                                  cartService.removeFromCart(cartItem);
+                                },
+                              ),
+                            ),
                           );
                         },
                       ),
-                      SizedBox(height: 16),
-                      Text(
-                        'Total: RM ${cartService.totalPrice.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Container(
+                    width: maxWidth,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Total: RM ${cartService.totalPrice.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
                         ),
-                      ),
-                      SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              isCheckoutVisible =
+                                  !isCheckoutVisible; // Toggle checkout visibility
+                            });
+                          },
+                          child: const Text('Proceed to Checkout'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (isCheckoutVisible) ...[
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Container(
+                      width: maxWidth,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ElevatedButton(
-                            onPressed: proceedToCheckout,
-                            child: const Text('Checkout'),
+                          Text(
+                            'Checkout Summary',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: cartService.cartItems.length,
+                            itemBuilder: (context, index) {
+                              final cartItem = cartService.cartItems[index];
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('${cartItem.dishName} x${cartItem.quantity}'),
+                                  Text('RM ${cartItem.price * cartItem.quantity}'),
+                                ],
+                              );
+                            },
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Total: RM ${cartService.totalPrice.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              ElevatedButton(
+                                onPressed: proceedToCheckout,
+                                child: const Text('Checkout'),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ],
-            ],
-          );
-        },
-      ),
-    );
-  }
+            );
+          },
+        );
+      },
+    ),
+  );
+}
+
 }

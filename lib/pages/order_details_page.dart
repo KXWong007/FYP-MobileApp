@@ -20,96 +20,121 @@ class OrderDetailsPage extends StatelessWidget {
           },
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: FutureBuilder(
-          future: Provider.of<OrderService>(context, listen: false)
-              .fetchOrderDetails(orderId),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth =
+              constraints.maxWidth > 500 ? 500.0 : constraints.maxWidth;
 
-            if (snapshot.hasError) {
-              return Center(
-                child: Text(
-                  'Failed to load order details: ${snapshot.error}',
-                  style: const TextStyle(color: Colors.red),
-                ),
-              );
-            }
+          return Center(
+            child: Container(
+              width: maxWidth,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: FutureBuilder(
+                  future: Provider.of<OrderService>(context, listen: false)
+                      .fetchOrderDetails(orderId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-            return Consumer<OrderService>(
-              builder: (context, orderService, child) {
-                final order = orderService.selectedOrder;
-                if (order.isEmpty) {
-                  return const Center(
-                      child: Text('No order details available.'));
-                }
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          'Failed to load order details: ${snapshot.error}',
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      );
+                    }
 
-                final orderItems = order['orderItems'] ?? [];
-                if (orderItems.isEmpty) {
-                  return const Center(child: Text('No order items available.'));
-                }
+                    return Consumer<OrderService>(
+                      builder: (context, orderService, child) {
+                        final order = orderService.selectedOrder;
+                        if (order.isEmpty) {
+                          return const Center(
+                            child: Text('No order details available.'),
+                          );
+                        }
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: orderItems.length,
-                        itemBuilder: (context, index) {
-                          final item = orderItems[index];
-                          final dishName = item['dishName'] ?? 'Unknown';
-                          final quantity = item['quantity'] ?? 0;
-                          final price = double.parse(item['price'] ?? '0.0');
-                          final totalPrice = quantity * price;
-                          final status = item['orderItemStatus'] ?? 'Unknown';
+                        final orderItems = order['orderItems'] ?? [];
+                        if (orderItems.isEmpty) {
+                          return const Center(
+                            child: Text('No order items available.'),
+                          );
+                        }
 
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: ListTile(
-                              title: Text(dishName),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                      'Qty: $quantity x RM${price.toStringAsFixed(2)}'),
-                                  Text('Status: $status'),
-                                ],
-                              ),
-                              trailing: Text(
-                                'RM${totalPrice.toStringAsFixed(2)}',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: ListView.builder(
+                                itemCount: orderItems.length,
+                                itemBuilder: (context, index) {
+                                  final item = orderItems[index];
+                                  final dishName =
+                                      item['dishName'] ?? 'Unknown';
+                                  final quantity = item['quantity'] ?? 0;
+                                  final price =
+                                      double.parse(item['price'] ?? '0.0');
+                                  final totalPrice = quantity * price;
+                                  final status =
+                                      item['orderItemStatus'] ?? 'Unknown';
+
+                                  return Card(
+                                    margin: const EdgeInsets.symmetric(
+                                        vertical: 8.0),
+                                    child: ListTile(
+                                      title: Text(dishName),
+                                      subtitle: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                              'Qty: $quantity x RM${price.toStringAsFixed(2)}'),
+                                          Text('Status: $status'),
+                                        ],
+                                      ),
+                                      trailing: Text(
+                                        'RM${totalPrice.toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                    Divider(),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Total Amount:',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            'RM${order['totalAmount']}',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        ),
+                            Divider(),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 16.0),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Total Amount:',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    'RM${order['totalAmount']}',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -16,22 +16,24 @@ class _OrderPageState extends State<OrderPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 600),
-          child: Column(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth =
+              constraints.maxWidth > 500 ? 500.0 : constraints.maxWidth;
+
+          return Column(
             children: [
               // Top Banner with Title and Back Button
               Stack(
                 children: [
                   Container(
-                    height: 60,
+                    height: constraints.maxWidth > 500 ? 80 : 60,
                     color: Color(0xffe6be8a),
                     alignment: Alignment.center,
                     child: Text(
                       'Orders List',
                       style: TextStyle(
-                        fontSize: 24,
+                        fontSize: constraints.maxWidth > 500 ? 30 : 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
@@ -56,16 +58,29 @@ class _OrderPageState extends State<OrderPage> {
               Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavigationButton(
-                        context, 'Pending', Colors.blue, 'Pending'),
-                    _buildNavigationButton(
-                        context, 'Completed', Colors.green, 'Completed'),
-                    _buildNavigationButton(
-                        context, 'Cancelled', Colors.red, 'Cancelled'),
-                  ],
+                child: Center(
+                  child: Container(
+                    width: maxWidth,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Flexible(
+                          child: _buildNavigationButton(
+                              context, 'Pending', Colors.blue, 'Pending'),
+                        ),
+                        SizedBox(width: 10), // Space between buttons
+                        Flexible(
+                          child: _buildNavigationButton(
+                              context, 'Completed', Colors.green, 'Completed'),
+                        ),
+                        SizedBox(width: 10), // Space between buttons
+                        Flexible(
+                          child: _buildNavigationButton(
+                              context, 'Cancelled', Colors.red, 'cancelled'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
 
@@ -73,154 +88,178 @@ class _OrderPageState extends State<OrderPage> {
 
               // Fetch orders and display them
               Expanded(
-                child: FutureBuilder(
-                  future: Provider.of<OrderService>(context, listen: false)
-                      .fetchOrders(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
+                child: SingleChildScrollView(
+                  child: Center(
+                    child: Container(
+                      width: maxWidth,
+                      child: FutureBuilder(
+                        future:
+                            Provider.of<OrderService>(context, listen: false)
+                                .fetchOrders(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                                child: CircularProgressIndicator());
+                          }
 
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'Failed to load orders: ${snapshot.error}',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      );
-                    }
-
-                    return Consumer<OrderService>(
-                      builder: (context, orderService, child) {
-                        final orders = _getFilteredOrders(
-                            List<Map<String, dynamic>>.from(
-                                orderService.orders));
-
-                        // Sort orders from latest to oldest
-                        orders.sort((a, b) {
-                          final aDate = DateTime.parse(a['orderDate']);
-                          final bDate = DateTime.parse(b['orderDate']);
-                          return bDate.compareTo(aDate); // Descending order
-                        });
-
-                        if (orders.isEmpty) {
-                          return const Center(
-                            child: Text('No orders available.'),
-                          );
-                        }
-
-                        return ListView.builder(
-                          itemCount: orders.length,
-                          itemBuilder: (context, index) {
-                            final order = orders[index];
-                            return Card(
-                              margin: const EdgeInsets.symmetric(
-                                  vertical: 8.0, horizontal: 16.0),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
-                              elevation: 4,
-                              child: Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: Colors.grey),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Order ID
-                                    Text(
-                                      'Order #${order['orderId'] ?? ''}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-
-                                    SizedBox(
-                                        height: 8.0), // Space between fields
-
-                                    // Table and Area
-                                    Text(
-                                      'Table: ${order['tableNum'] ?? ''} | Area: ${order['area'] ?? ''}',
-                                      style: TextStyle(fontSize: 14),
-                                    ),
-
-                                    SizedBox(
-                                        height: 8.0), // Space between fields
-
-                                    // Date and Time
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Date: ${DateFormat('yyyy-MM-dd').format(DateTime.parse(order['orderDate']))}',
-                                          style: TextStyle(fontSize: 14),
-                                        ),
-                                        Text(
-                                          'Time: ${DateFormat('HH:mm').format(DateTime.parse(order['orderDate']))}',
-                                          style: TextStyle(fontSize: 14),
-                                        ),
-                                      ],
-                                    ),
-
-                                    SizedBox(
-                                        height: 8.0), // Space between fields
-
-                                    // Total Amount
-                                    Text(
-                                      'Total: RM ${order['totalAmount'] ?? '0.00'}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-
-                                    SizedBox(
-                                        height: 8.0), // Space between fields
-
-                                    // Order Status
-                                    Text(
-                                      'Status: ${order['orderStatus'] ?? 'Pending'}',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: order['orderStatus'] == 'Pending'
-                                            ? Colors.blue
-                                            : order['orderStatus'] ==
-                                                    'Completed'
-                                                ? Colors.green
-                                                : Colors.red,
-                                      ),
-                                    ),
-
-                                    SizedBox(
-                                        height: 16.0), // Space before button
-
-                                    // Buttons
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children:
-                                          _buildActionButtons(context, order),
-                                    ),
-                                  ],
-                                ),
+                          if (snapshot.hasError) {
+                            return Center(
+                              child: Text(
+                                'Failed to load orders: ${snapshot.error}',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.red),
                               ),
                             );
-                          },
-                        );
-                      },
-                    );
-                  },
+                          }
+
+                          return Consumer<OrderService>(
+                            builder: (context, orderService, child) {
+                              final orders = _getFilteredOrders(
+                                List<Map<String, dynamic>>.from(
+                                    orderService.orders),
+                              );
+
+                              // Sort orders from latest to oldest
+                              orders.sort((a, b) {
+                                final aDate = DateTime.parse(a['orderDate']);
+                                final bDate = DateTime.parse(b['orderDate']);
+                                return bDate
+                                    .compareTo(aDate); // Descending order
+                              });
+
+                              if (orders.isEmpty) {
+                                return const Center(
+                                  child: Text('No orders available.'),
+                                );
+                              }
+
+                              return ListView.builder(
+                                shrinkWrap: true,
+                                physics: NeverScrollableScrollPhysics(),
+                                itemCount: orders.length,
+                                itemBuilder: (context, index) {
+                                  final order = orders[index];
+                                  return Card(
+                                    margin: const EdgeInsets.symmetric(
+                                      vertical: 8.0,
+                                      horizontal: 16.0,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    elevation: 4,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(color: Colors.grey),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          // Order ID
+                                          Text(
+                                            'Order #${order['orderId'] ?? ''}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+
+                                          SizedBox(
+                                              height:
+                                                  8.0), // Space between fields
+
+                                          // Table and Area
+                                          Text(
+                                            'Table: ${order['tableNum'] ?? ''} | Area: ${order['area'] ?? ''}',
+                                            style: TextStyle(fontSize: 14),
+                                          ),
+
+                                          SizedBox(
+                                              height:
+                                                  8.0), // Space between fields
+
+                                          // Date and Time
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                'Date: ${DateFormat('yyyy-MM-dd').format(DateTime.parse(order['orderDate']))}',
+                                                style: TextStyle(fontSize: 14),
+                                              ),
+                                              Text(
+                                                'Time: ${DateFormat('HH:mm').format(DateTime.parse(order['orderDate']))}',
+                                                style: TextStyle(fontSize: 14),
+                                              ),
+                                            ],
+                                          ),
+
+                                          SizedBox(
+                                              height:
+                                                  8.0), // Space between fields
+
+                                          // Total Amount
+                                          Text(
+                                            'Total: RM ${order['totalAmount'] ?? '0.00'}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+
+                                          SizedBox(
+                                              height:
+                                                  8.0), // Space between fields
+
+                                          // Order Status
+                                          Text(
+                                            'Status: ${order['orderStatus'] ?? 'Pending'}',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: order['orderStatus'] ==
+                                                      'Pending'
+                                                  ? Colors.blue
+                                                  : order['orderStatus'] ==
+                                                          'Completed'
+                                                      ? Colors.green
+                                                      : Colors.red,
+                                            ),
+                                          ),
+
+                                          SizedBox(
+                                              height:
+                                                  16.0), // Space before button
+
+                                          // Buttons
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: _buildActionButtons(
+                                                context, order),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
-          ),
-        ),
+          );
+        },
       ),
     );
   }
