@@ -26,16 +26,29 @@ class _TableReservationPageState extends State<TableReservationPage> {
     if (selectedDate == null) return true;
 
     final now = DateTime.now().toUtc().add(malaysiaTimeZoneOffset);
-    if (isSameDay(selectedDate!, now)) {
-      final currentTime = TimeOfDay.fromDateTime(now);
-      // Convert both times to minutes for easier comparison
-      final selectedMinutes = time.hour * 60 + time.minute;
-      final currentMinutes = currentTime.hour * 60 + currentTime.minute;
-
-      // Add buffer time (e.g., 30 minutes from now)
-      return selectedMinutes >= (currentMinutes + 30);
+    final currentTimeOfDay = TimeOfDay.fromDateTime(now);
+    
+    // If current time is past 10 PM, only allow future dates
+    if (currentTimeOfDay.hour >= 22) {
+      if (!selectedDate!.isAfter(now.add(Duration(days: 1)).subtract(Duration(days: 1)))) {
+        return false;
+      }
     }
-    return true;
+    
+    // If selected date is today
+    if (isSameDay(selectedDate!, now)) {
+      // Convert both times to minutes for comparison
+      final selectedMinutes = time.hour * 60 + time.minute;
+      final currentMinutes = currentTimeOfDay.hour * 60 + currentTimeOfDay.minute;
+
+      // Check if time is within operating hours and at least 30 minutes from now
+      return time.hour >= 8 && 
+             time.hour < 22 && 
+             selectedMinutes >= (currentMinutes + 30);
+    }
+    
+    // For future dates, just check operating hours
+    return time.hour >= 8 && time.hour < 22;
   }
 
   @override
@@ -44,18 +57,49 @@ class _TableReservationPageState extends State<TableReservationPage> {
     // Initialize Malaysia current time
     malaysiaCurrentTime = DateTime.now().toUtc().add(malaysiaTimeZoneOffset);
 
-    // Initialize with exact current Malaysia time
-    selectedTime = TimeOfDay.fromDateTime(malaysiaCurrentTime);
+    // Check if current time is past 10 PM
+    final currentTimeOfDay = TimeOfDay.fromDateTime(malaysiaCurrentTime);
+    if (currentTimeOfDay.hour >= 22) {
+      // Set selected date to tomorrow
+      selectedDate = malaysiaCurrentTime.add(Duration(days: 1));
+      _selectedDay = selectedDate;
+      _focusedDay = selectedDate!;
+      
+      // Set selected time to 8 AM
+      selectedTime = TimeOfDay(hour: 8, minute: 0);
+      _timeManuallySelected = true;
+    } else {
+      // Initialize with current time if within operating hours
+      selectedTime = TimeOfDay.fromDateTime(malaysiaCurrentTime);
+      if (selectedTime!.hour < 8) {
+        // If before 8 AM, set to 8 AM
+        selectedTime = TimeOfDay(hour: 8, minute: 0);
+        _timeManuallySelected = true;
+      }
+    }
 
-    // Start a timer to update the current time every minute
+    // Start timer for updates
     _timer = Timer.periodic(Duration(minutes: 1), (timer) {
       if (mounted) {
         setState(() {
-          malaysiaCurrentTime =
-              DateTime.now().toUtc().add(malaysiaTimeZoneOffset);
+          malaysiaCurrentTime = DateTime.now().toUtc().add(malaysiaTimeZoneOffset);
           // Only update selectedTime if it hasn't been manually changed by user
           if (!_timeManuallySelected) {
-            selectedTime = TimeOfDay.fromDateTime(malaysiaCurrentTime);
+            TimeOfDay currentTime = TimeOfDay.fromDateTime(malaysiaCurrentTime);
+            if (currentTime.hour >= 22) {
+              // If past 10 PM, set next day 8 AM
+              selectedDate = malaysiaCurrentTime.add(Duration(days: 1));
+              _selectedDay = selectedDate;
+              _focusedDay = selectedDate!;
+              selectedTime = TimeOfDay(hour: 8, minute: 0);
+              _timeManuallySelected = true;
+            } else if (currentTime.hour < 8) {
+              // If before 8 AM, set to 8 AM
+              selectedTime = TimeOfDay(hour: 8, minute: 0);
+              _timeManuallySelected = true;
+            } else {
+              selectedTime = currentTime;
+            }
           }
         });
       }
@@ -85,22 +129,42 @@ class _TableReservationPageState extends State<TableReservationPage> {
           ],
         ),
         child: TableCalendar(
-          firstDay: DateTime.now(),
+          firstDay: DateTime.now().subtract(Duration(days: 365)),
           lastDay: DateTime.now().add(Duration(days: 365)),
-          focusedDay: _focusedDay,
+          focusedDay: _focusedDay ?? DateTime.now(),
           calendarFormat: _calendarFormat,
+          enabledDayPredicate: _enabledDayPredicate(),
           selectedDayPredicate: (day) {
             return isSameDay(_selectedDay, day);
           },
           onDaySelected: (selectedDay, focusedDay) {
-            if (!isSameDay(_selectedDay, selectedDay)) {
-              setState(() {
-                _selectedDay = selectedDay;
-                _focusedDay = focusedDay;
-                selectedDate = selectedDay; // Update the selectedDate
-                print('Selected date: $selectedDate'); // Debug print
-              });
+            final now = DateTime.now().toUtc().add(malaysiaTimeZoneOffset);
+            final currentTimeOfDay = TimeOfDay.fromDateTime(now);
+
+            // If current time is past 10 PM and trying to select today or earlier
+            if (currentTimeOfDay.hour >= 22 && 
+                !selectedDay.isAfter(now.add(Duration(days: 1)).subtract(Duration(days: 1)))) {
+              // Show error message
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Please select a date from tomorrow onwards'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              return;
             }
+
+            setState(() {
+              _selectedDay = selectedDay;
+              selectedDate = selectedDay;
+              _focusedDay = focusedDay;
+              
+              // Reset time to 8 AM if selecting a future date
+              if (!isSameDay(selectedDay, now)) {
+                selectedTime = TimeOfDay(hour: 8, minute: 0);
+                _timeManuallySelected = true;
+              }
+            });
           },
           onFormatChanged: (format) {
             setState(() {
@@ -128,9 +192,44 @@ class _TableReservationPageState extends State<TableReservationPage> {
     );
   }
 
+  // Update the calendar's enabled day predicate
+  bool Function(DateTime) _enabledDayPredicate() {
+    return (day) {
+      final now = DateTime.now().toUtc().add(malaysiaTimeZoneOffset);
+      final currentTimeOfDay = TimeOfDay.fromDateTime(now);
+      
+      // If current time is past 10 PM
+      if (currentTimeOfDay.hour >= 22) {
+        // Only allow dates from tomorrow onwards
+        return day.isAfter(now.add(Duration(days: 1)).subtract(Duration(days: 1)));
+      }
+      
+      // Otherwise, only allow today and future dates
+      return !day.isBefore(now.subtract(Duration(days: 1)));
+    };
+  }
+
   // Time Picker Widget
   Widget _buildTimePicker() {
-    final currentTime = TimeOfDay.fromDateTime(malaysiaCurrentTime);
+    final now = DateTime.now().toUtc().add(malaysiaTimeZoneOffset);
+    final currentTimeOfDay = TimeOfDay.fromDateTime(now);
+    
+    // Determine initial time based on current time
+    TimeOfDay initialTime;
+    if (currentTimeOfDay.hour >= 21) {
+      // After 9 PM, set to 8:30 AM
+      initialTime = TimeOfDay(hour: 8, minute: 30);
+    } else if (currentTimeOfDay.hour < 8 || 
+              (currentTimeOfDay.hour == 8 && currentTimeOfDay.minute < 30)) {
+      // Before 8:30 AM, set to 8:30 AM
+      initialTime = TimeOfDay(hour: 8, minute: 30);
+    } else {
+      // During operating hours, use current time
+      initialTime = currentTimeOfDay;
+    }
+
+    // Use initialTime if selectedTime is not set
+    final displayTime = selectedTime ?? initialTime;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -151,10 +250,9 @@ class _TableReservationPageState extends State<TableReservationPage> {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                'Select Time',
+                'Select Time (8:30 AM - 9:00 PM)',
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
@@ -162,13 +260,15 @@ class _TableReservationPageState extends State<TableReservationPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _buildTimeWheel(
-                  value: selectedTime?.hour ?? currentTime.hour,
+                  value: displayTime.hour,
                   maxValue: 23,
                   onChanged: (value) {
                     _timeManuallySelected = true;
                     final newTime = TimeOfDay(
                       hour: value,
-                      minute: selectedTime?.minute ?? currentTime.minute,
+                      minute: value == 8 ? 30 : // Force 30 minutes for 8 AM
+                             value == 21 ? 0 :  // Force 0 minutes for 9 PM
+                             displayTime.minute,
                     );
                     if (isTimeValid(newTime)) {
                       setState(() {
@@ -177,8 +277,7 @@ class _TableReservationPageState extends State<TableReservationPage> {
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(
-                              'Please select a time at least 30 minutes from now'),
+                          content: Text('Please select a valid time between 8:30 AM and 9:00 PM'),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -197,13 +296,15 @@ class _TableReservationPageState extends State<TableReservationPage> {
                   ),
                 ),
                 _buildTimeWheel(
-                  value: selectedTime?.minute ?? currentTime.minute,
+                  value: displayTime.minute,
                   maxValue: 59,
                   onChanged: (value) {
                     _timeManuallySelected = true;
                     final newTime = TimeOfDay(
-                      hour: selectedTime?.hour ?? currentTime.hour,
-                      minute: value,
+                      hour: displayTime.hour,
+                      minute: displayTime.hour == 8 ? (value < 30 ? 30 : value) : // Minimum 30 for 8 AM
+                             displayTime.hour == 21 ? 0 :              // Always 0 for 9 PM
+                             value,
                     );
                     if (isTimeValid(newTime)) {
                       setState(() {
@@ -212,8 +313,7 @@ class _TableReservationPageState extends State<TableReservationPage> {
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(
-                              'Please select a time at least 30 minutes from now'),
+                          content: Text('Please select a valid time between 8:30 AM and 9:00 PM'),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -234,7 +334,6 @@ class _TableReservationPageState extends State<TableReservationPage> {
     required Function(int) onChanged,
   }) {
     final currentTime = TimeOfDay.fromDateTime(malaysiaCurrentTime);
-    final currentTotalMinutes = currentTime.hour * 60 + currentTime.minute;
 
     return Container(
       height: 150,
@@ -247,84 +346,109 @@ class _TableReservationPageState extends State<TableReservationPage> {
         onSelectedItemChanged: (index) {
           // For hours wheel
           if (maxValue == 23) {
-            final newTotalMinutes = index * 60 + (selectedTime?.minute ?? 0);
-            if (selectedDate == null ||
-                !isSameDay(selectedDate!, malaysiaCurrentTime) ||
-                newTotalMinutes >= currentTotalMinutes) {
-              onChanged(index);
-            } else {
-              // Bounce back to current hour if trying to select past time
+            final actualHour = index + 8; // Convert index to actual hour (8-21)
+            if (actualHour > 21) {  // Prevent selecting hours after 9 PM
+              return;
+            }
+            
+            if (actualHour == 8 && (selectedTime?.minute ?? 0) < 30) {
+              // If selecting 8 AM, ensure minutes are at least 30
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                (context as Element).markNeedsBuild();
                 setState(() {
-                  selectedTime = TimeOfDay(
-                    hour: currentTime.hour,
-                    minute: selectedTime?.minute ?? currentTime.minute,
-                  );
+                  selectedTime = TimeOfDay(hour: 8, minute: 30);
                 });
               });
+            } else if (actualHour == 21 && (selectedTime?.minute ?? 0) > 0) {
+              // If selecting 9 PM, ensure minutes are 0
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                setState(() {
+                  selectedTime = TimeOfDay(hour: 21, minute: 0);
+                });
+              });
+            } else {
+              onChanged(actualHour);
             }
           }
           // For minutes wheel
           else {
-            if (selectedDate == null ||
-                !isSameDay(selectedDate!, malaysiaCurrentTime)) {
-              onChanged(index);
-            } else if (selectedTime?.hour == currentTime.hour) {
-              if (index >= currentTime.minute) {
-                onChanged(index);
-              } else {
-                // Bounce back to current minute if trying to select past time
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  (context as Element).markNeedsBuild();
-                  setState(() {
-                    selectedTime = TimeOfDay(
-                      hour: selectedTime?.hour ?? currentTime.hour,
-                      minute: currentTime.minute,
-                    );
-                  });
+            final newTime = TimeOfDay(
+              hour: selectedTime?.hour ?? currentTime.hour,
+              minute: index,
+            );
+            
+            // Only restrict minutes for boundary hours (8 AM and 9 PM)
+            if (newTime.hour == 8 && index < 30) {
+              // If 8 AM, minimum minutes is 30
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                setState(() {
+                  selectedTime = TimeOfDay(hour: 8, minute: 30);
                 });
-              }
-            } else {
+              });
+              return;
+            } else if (newTime.hour == 21 && index > 0) {
+              // If 9 PM, only allow 00 minutes
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                setState(() {
+                  selectedTime = TimeOfDay(hour: 21, minute: 0);
+                });
+              });
+              return;
+            }
+            
+            // For all other hours, allow any minute
+            if (isTimeValid(newTime)) {
               onChanged(index);
             }
           }
         },
-        controller: FixedExtentScrollController(initialItem: value),
+        controller: FixedExtentScrollController(
+          initialItem: maxValue == 23 ? (value - 8) : value
+        ),
         childDelegate: ListWheelChildBuilderDelegate(
-          childCount: maxValue + 1,
+          childCount: maxValue == 23 ? 14 : 60, // 14 hours (8-21) or 60 minutes
           builder: (context, index) {
             bool isPastTime = false;
+            bool isInvalidTime = false;
+            final actualHour = maxValue == 23 ? index + 8 : selectedTime?.hour ?? 8;
+
+            // Check if time is invalid only for boundary hours
+            if (maxValue == 23) {
+              isInvalidTime = actualHour > 21;  // Gray out hours after 9 PM
+            } else {
+              isInvalidTime = (selectedTime?.hour == 8 && index < 30) || // Only gray out minutes before 30 for 8 AM
+                             (selectedTime?.hour == 21 && index > 0);    // Only gray out minutes after 00 for 9 PM
+            }
 
             // Check if this is a past time
             if (selectedDate != null &&
                 isSameDay(selectedDate!, malaysiaCurrentTime)) {
-              if (maxValue == 23) {
-                // Hours wheel
-                isPastTime = index < currentTime.hour;
-              } else {
-                // Minutes wheel
-                if (selectedTime?.hour == currentTime.hour) {
-                  isPastTime = index < currentTime.minute;
-                }
-              }
+              final currentMinutes = currentTime.hour * 60 + currentTime.minute;
+              final selectedMinutes = (selectedTime?.hour ?? actualHour) * 60 + 
+                                    (maxValue == 23 ? 0 : index);
+              
+              isPastTime = selectedMinutes < currentMinutes;
             }
 
             return Container(
               decoration: BoxDecoration(
-                color: value == index ? Color(0xFFF5F5F5) : Colors.transparent,
+                color: (maxValue == 23 ? index + 8 : index) == value 
+                    ? Color(0xFFF5F5F5) 
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Center(
                 child: Text(
-                  index.toString().padLeft(2, '0'),
+                  maxValue == 23 
+                      ? (index + 8).toString().padLeft(2, '0')
+                      : index.toString().padLeft(2, '0'),
                   style: TextStyle(
                     fontSize: 30,
-                    fontWeight:
-                        value == index ? FontWeight.bold : FontWeight.normal,
-                    color: isPastTime
-                        ? Colors.grey[300] // Gray out past times
-                        : value == index
+                    fontWeight: (maxValue == 23 ? index + 8 : index) == value 
+                        ? FontWeight.bold 
+                        : FontWeight.normal,
+                    color: isInvalidTime || isPastTime
+                        ? Colors.grey[300]
+                        : (maxValue == 23 ? index + 8 : index) == value
                             ? Colors.brown
                             : Colors.grey[400],
                   ),
@@ -354,15 +478,13 @@ class _TableReservationPageState extends State<TableReservationPage> {
         if (result['success'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: Text(
-                    'Reservation created successful, kindly go your email and confirm the reservation')),
+                content: Text('Reservation created. Please come to your appointment')),
           );
           Navigator.pop(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content:
-                    Text(result['message'] ?? 'Failed to create reservation')),
+                content: Text(result['message'] ?? 'Failed to create reservation')),
           );
         }
       } catch (e) {
@@ -380,153 +502,221 @@ class _TableReservationPageState extends State<TableReservationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final maxWidth =
-              constraints.maxWidth > 500 ? 500.0 : constraints.maxWidth;
-
-          return Column(
-            children: [
-              // Top Banner
-              Stack(
-                children: [
-                  Container(
-                    height: constraints.maxWidth > 500 ? 80 : 60,
-                    color: Color(0xffe6be8a),
-                    width: double.infinity,
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Table Reservation',
-                      style: TextStyle(
-                        fontSize: constraints.maxWidth > 500 ? 30 : 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 10,
-                    top: 10,
-                    child: IconButton(
-                      icon: Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 20),
-              // Reservation Form Content
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Center(
-                    child: Container(
-                      width: maxWidth,
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            _buildCalendar(),
-                            _buildTimePicker(),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 10),
-                              child: DropdownButtonFormField<String>(
-                                decoration: InputDecoration(
-                                  labelText: 'Area',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                items: [
-                                  DropdownMenuItem(
-                                    value: 'The Hornbill Restaurant (Chinese)',
-                                    child: Text(
-                                        'The Hornbill Restaurant (Chinese)'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'The Rajah Room (Western)',
-                                    child: Text('The Rajah Room (Western)'),
-                                  ),
-                                ],
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedArea = value;
-                                  });
-                                },
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 10),
-                              child: TextFormField(
-                                decoration: InputDecoration(
-                                  labelText: 'Pax',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                keyboardType: TextInputType.number,
-                                onChanged: (value) {
-                                  setState(() {
-                                    pax = int.tryParse(value);
-                                  });
-                                },
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Column(
-                                children: [
-                                  Text('Want to book for an event?'),
-                                  Text('Call: 012-3456789'),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        toolbarHeight: 60,
+        backgroundColor: Color(0xffe6be8a),
+        centerTitle: true,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            color: Color(0xffe6be8a),
+            boxShadow: [
+              BoxShadow(
+                offset: Offset(0, 3),
+                blurRadius: 6,
+                color: Colors.grey.shade400,
               ),
             ],
-          );
-        },
+          ),
+        ),
+        title: Text(
+          'Book Reservation',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
       ),
-      // Bottom Banner
-      bottomNavigationBar: LayoutBuilder(
-        builder: (context, constraints) {
-          return Container(
-            height: constraints.maxWidth > 500 ? 80 : 60, // Use LayoutBuilder for responsive height
-            color: Color(0xffe6be8a),
-            child: Center(
-              child: ElevatedButton(
-                onPressed: _bookNow,
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Color(0xffe6be8a),
-                  backgroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(50),
-                  ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      offset: Offset(3, 3),
+                      blurRadius: 6,
+                      color: Colors.grey.shade400,
+                    ),
+                  ],
                 ),
-                child: Text(
-                  'Book Now',
-                  style: TextStyle(
-                    fontSize: constraints.maxWidth > 500 ? 22 : 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xffe6be8a),
+                child: _buildCalendar(),
+              ),
+              
+              SizedBox(height: 20),
+              
+              Container(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      offset: Offset(3, 3),
+                      blurRadius: 6,
+                      color: Colors.grey.shade400,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    _buildTimePicker(),
+                  ],
+                ),
+              ),
+              
+              SizedBox(height: 20),
+              
+              Container(
+                width: double.infinity,
+                constraints: BoxConstraints(maxWidth: 600),
+                child: Column(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16.0),
+                        boxShadow: [
+                          BoxShadow(
+                            offset: Offset(3, 3),
+                            blurRadius: 6,
+                            color: Colors.grey.shade400,
+                          ),
+                        ],
+                      ),
+                      child: DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          labelText: 'Area',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none, // Remove border line
+                          ),
+                        ),
+                        items: [
+                          DropdownMenuItem(
+                            value: 'The Hornbill Restaurant (Chinese)',
+                            child: Text('The Hornbill Restaurant (Chinese)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'The Rajah Room (Western)',
+                            child: Text('The Rajah Room (Western)'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedArea = value;
+                          });
+                        },
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16.0),
+                        boxShadow: [
+                          BoxShadow(
+                            offset: Offset(3, 3),
+                            blurRadius: 6,
+                            color: Colors.grey.shade400,
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'Pax',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none, // Remove border line
+                          ),
+                          hintText: 'Enter number of people',
+                        ),
+                        onChanged: (value) {
+                          if (value.isNotEmpty) {
+                            final number = int.tryParse(value);
+                            if (number != null && number > 0) {
+                              setState(() {
+                                pax = number;
+                              });
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              SizedBox(height: 20),
+
+              Container(
+                width: double.infinity,
+                constraints: BoxConstraints(maxWidth: 600),
+                child: ElevatedButton(
+                  onPressed: _bookNow,
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Color(0xffe6be8a),
+                    padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Book Now',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        },
+
+              SizedBox(height: 20),
+
+              Container(
+                width: double.infinity,
+                alignment: Alignment.center,
+                child: Column(
+                  children: [
+                    Text(
+                      'Want to book an event?',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.brown,
+                      ),
+                    ),
+                    Text(
+                      'Call 0123456789',
+                      style: TextStyle(
+                        fontSize: 17,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 20),
+              
+            ],
+          ),
+        ),
       ),
     );
   }

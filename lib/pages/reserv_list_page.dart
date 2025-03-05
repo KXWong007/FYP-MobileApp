@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:http/http.dart' as http;
@@ -15,15 +16,16 @@ class _ReservationListPageState extends State<ReservationListPage> {
   bool isLoading = true;
   String? error;
   String currentFilter = 'upcoming';
-  Timer? _refreshTimer; // Add timer variable
+  Timer? _refreshTimer;
+  final Duration malaysiaTimeZoneOffset = const Duration(hours: 8);
 
   @override
   void initState() {
     super.initState();
     fetchReservations();
-    // Set up periodic refresh every 30 seconds
+    // Set up periodic refresh
     _refreshTimer = Timer.periodic(Duration(seconds: 2), (timer) {
-      if (mounted) {
+      if (mounted) {  // Check if widget is still mounted
         fetchReservations();
       }
     });
@@ -31,11 +33,13 @@ class _ReservationListPageState extends State<ReservationListPage> {
 
   @override
   void dispose() {
-    _refreshTimer?.cancel(); // Cancel timer when disposing
+    _refreshTimer?.cancel();  // Cancel timer when disposing
     super.dispose();
   }
 
   Future<void> fetchReservations() async {
+    if (!mounted) return;  // Add this check at the start of the method
+    
     try {
       // Don't show loading indicator for automatic refreshes
       if (isLoading) {
@@ -55,6 +59,8 @@ class _ReservationListPageState extends State<ReservationListPage> {
         },
       );
 
+      if (!mounted) return;  // Add this check before setState
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
@@ -66,7 +72,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
           throw Exception(data['message'] ?? 'Failed to fetch reservations');
         }
       } else {
-        throw Exception('Server error: ${response.statusCode}');
+        throw Exception('Server error! Contact admin for assistance');
       }
     } catch (e) {
       setState(() {
@@ -91,7 +97,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
       switch (currentFilter) {
         case 'upcoming':
           return date.isAfter(now) &&
-              ['confirm', 'firstc', 'secondc', 'thirdc'].contains(status);
+              ['confirm', 'waitinglist'].contains(status);
         case 'completed':
           return date.isBefore(now) && status == 'completed';
         case 'cancelled':
@@ -104,7 +110,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
     // Sort the filtered list
     if (currentFilter == 'upcoming') {
       filtered.sort((a, b) {
-        // First sort by status (confirmed first)
+        // First sort by status (confirmed first, then waiting list)
         final statusA = a['rstatus'].toString().toLowerCase();
         final statusB = b['rstatus'].toString().toLowerCase();
 
@@ -164,7 +170,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
           throw Exception(data['message'] ?? 'Failed to cancel reservation');
         }
       } else {
-        throw Exception('Server error: ${response.statusCode}');
+        throw Exception('Server error! Contact admin for assistance');
       }
     } catch (e) {
       // Hide loading dialog if error occurs
@@ -185,24 +191,32 @@ class _ReservationListPageState extends State<ReservationListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final maxWidth =
-              constraints.maxWidth > 500 ? 500.0 : constraints.maxWidth;
-
-          return Column(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 600),
+          child: Column(
             children: [
               // Top Banner with Title and Back Button
               Stack(
                 children: [
                   Container(
-                    height: constraints.maxWidth > 500 ? 80 : 60,
-                    color: Color(0xffe6be8a),
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: Color(0xffe6be8a),
+                      boxShadow: [
+                        BoxShadow(
+                          offset: Offset(0, 3),
+                          blurRadius: 6,
+                          color: Colors.grey.shade400,
+                        ),
+                      ],
+                    ),
                     alignment: Alignment.center,
                     child: Text(
                       'Reservation List',
                       style: TextStyle(
-                        fontSize: constraints.maxWidth > 500 ? 30 : 24,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
@@ -214,41 +228,29 @@ class _ReservationListPageState extends State<ReservationListPage> {
                     child: IconButton(
                       icon: Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () {
-                        Navigator.pop(context); // Navigate back to Main Menu
+                        Navigator.pop(context);
                       },
                     ),
                   ),
                 ],
               ),
+
               SizedBox(height: 20), // Space between widgets
 
               // Navigation Buttons
               Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Center(
-                  child: Container(
-                    width: maxWidth,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Flexible(
-                          child: _buildNavigationButton(
-                              context, 'Upcoming', Colors.blue, 'upcoming'),
-                        ),
-                        SizedBox(width: 10), // Space between buttons
-                        Flexible(
-                          child: _buildNavigationButton(
-                              context, 'Completed', Colors.green, 'completed'),
-                        ),
-                        SizedBox(width: 10), // Space between buttons
-                        Flexible(
-                          child: _buildNavigationButton(
-                              context, 'Cancelled', Colors.red, 'cancelled'),
-                        ),
-                      ],
-                    ),
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildNavigationButton(
+                        context, 'Upcoming', Color(0xffe6be8a), 'upcoming'),
+                    _buildNavigationButton(
+                        context, 'Completed', Color(0xffe6be8a), 'completed'),
+                    _buildNavigationButton(
+                        context, 'Cancelled', Color(0xffe6be8a), 'cancelled'),
+                  ],
                 ),
               ),
 
@@ -262,10 +264,34 @@ class _ReservationListPageState extends State<ReservationListPage> {
                       ? Center(child: CircularProgressIndicator())
                       : error != null
                           ? Center(child: Text(error!))
-                          : Center(
-                              child: Container(
-                                width: maxWidth,
-                                child: ListView.builder(
+                          : getFilteredReservations().isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.calendar_today,
+                                        size: 64,
+                                        color: Color(0xffe6be8a),
+                                      ),
+                                      SizedBox(height: 16),
+                                      Text(
+                                        currentFilter == 'upcoming' 
+                                            ? 'No Upcoming Reservations'
+                                            : currentFilter == 'completed'
+                                                ? 'No Completed Reservations'
+                                                : 'No Cancelled Reservations',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          color: Color(0xffe6be8a),
+                                          // fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      SizedBox(height: 8),
+                                    ],
+                                  ),
+                                )
+                              : ListView.builder(
                                   physics:
                                       AlwaysScrollableScrollPhysics(), // Enable scrolling
                                   padding: EdgeInsets.symmetric(horizontal: 20),
@@ -277,40 +303,45 @@ class _ReservationListPageState extends State<ReservationListPage> {
                                         reservation['reservationDate']);
 
                                     return _buildReservationCard(
-                                      status: _getStatusText(
-                                          reservation['rstatus']),
-                                      reservationId:
-                                          reservation['reservationId'],
+                                      status:
+                                          _getStatusText(reservation['rstatus']),
+                                      reservationId: reservation['reservationId'],
                                       pax: reservation['pax'].toString(),
                                       area: _getAreaText(reservation['rarea']),
-                                      date:
-                                          DateFormat('yyyy-MM-dd').format(date),
+                                      date: DateFormat('yyyy-MM-dd').format(date),
                                       time: DateFormat('HH:mm').format(date),
                                       buttonColor: _getActionButtonColor(
                                           reservation['rstatus']),
                                       buttonText: _getActionButtonText(
                                           reservation['rstatus']),
-                                      buttonAction:
-                                          reservation['rstatus'] == 'confirm'
-                                              ? () => cancelReservation(
-                                                  reservation['reservationId'])
-                                              : null,
+                                      buttonAction: (reservation['rstatus'] == 'confirm' || 
+                                                    reservation['rstatus'] == 'waitinglist')  // Updated to match database
+                                                  ? () => cancelReservation(reservation['reservationId'])
+                                                  : null,
                                     );
                                   },
                                 ),
-                              ),
-                            ),
                 ),
               ),
 
               // Bottom Banner
               Container(
-                height: constraints.maxWidth > 500 ? 80 : 60,
-                color: Color(0xffe6be8a),
+                height: 50,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Color(0xffe6be8a),
+                  boxShadow: [
+                    BoxShadow(
+                      offset: Offset(0, -3),
+                      blurRadius: 6,
+                      color: Colors.grey.shade400,
+                    ),
+                  ],
+                ),
               ),
             ],
-          );
-        },
+          ),
+        ),
       ),
     );
   }
@@ -319,15 +350,13 @@ class _ReservationListPageState extends State<ReservationListPage> {
   String _getStatusText(String status) {
     switch (status.toLowerCase()) {
       case 'confirm':
-        return 'Booking Confirmed';
-      case 'firstc':
-      case 'secondc':
-      case 'thirdc':
-        return 'Pending Confirmation';
+        return 'Upcoming';
       case 'cancel':
         return 'Cancelled';
       case 'completed':
         return 'Completed';
+      case 'waitinglist':  // Updated to match database
+        return 'In Waiting List';
       default:
         return 'Unknown Status';
     }
@@ -347,11 +376,8 @@ class _ReservationListPageState extends State<ReservationListPage> {
   Color _getActionButtonColor(String status) {
     switch (status.toLowerCase()) {
       case 'confirm':
-        return Colors.red; // Cancel button
-      case 'firstc':
-      case 'secondc':
-      case 'thirdc':
-        return Colors.grey; // Pending
+      case 'waitinglist':  // Updated to match database
+        return Color(0xffe6be8a);
       default:
         return Colors.grey;
     }
@@ -360,11 +386,8 @@ class _ReservationListPageState extends State<ReservationListPage> {
   String _getActionButtonText(String status) {
     switch (status.toLowerCase()) {
       case 'confirm':
+      case 'waitinglist':  // Updated to match database
         return 'Cancel';
-      case 'firstc':
-      case 'secondc':
-      case 'thirdc':
-        return 'Waiting for confirmation...';
       case 'cancel':
         return 'Cancelled';
       case 'completed':
@@ -376,23 +399,49 @@ class _ReservationListPageState extends State<ReservationListPage> {
 
   // Update the navigation button to include filter functionality
   Widget _buildNavigationButton(
-      BuildContext context, String label, Color color, String filter) {
-    return ElevatedButton(
-      onPressed: () {
-        setState(() {
-          currentFilter = filter;
-        });
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor:
-            currentFilter == filter ? color : color.withOpacity(0.6),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+    BuildContext context,
+    String label,
+    Color color,
+    String filter,
+  ) {
+    final bool isSelected = currentFilter == filter;
+    
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 5),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                offset: Offset(3, 3),
+                blurRadius: 6,
+                color: Colors.grey.shade400,
+              ),
+            ],
+          ),
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isSelected ? color : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0, // Remove default button elevation
+            ),
+            onPressed: () {
+              setState(() {
+                currentFilter = filter;
+              });
+            },
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : color,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(color: Colors.white),
       ),
     );
   }
@@ -409,143 +458,127 @@ class _ReservationListPageState extends State<ReservationListPage> {
     required String buttonText,
     VoidCallback? buttonAction,
   }) {
+    // Check if reservation is today and before 9 PM
+    final reservationDateTime = DateTime.parse('$date $time');
+    final now = DateTime.now().toUtc().add(malaysiaTimeZoneOffset);
+    final isToday = isSameDay(reservationDateTime, now);
+    final reservationTimeOfDay = TimeOfDay.fromDateTime(reservationDateTime);
+    final isBefore9PM = reservationTimeOfDay.hour < 21 || 
+                       (reservationTimeOfDay.hour == 21 && reservationTimeOfDay.minute == 0);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.grey[100],
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey),
+          boxShadow: [
+            BoxShadow(
+              offset: Offset(3, 3),
+              blurRadius: 6,
+              color: Colors.grey.shade400,
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // First row: Status and Reservation ID
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Flexible(
-                  child: Text(
-                    status,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: _getStatusColor(status),
+                Row(
+                  children: [
+                    Text(
+                      status,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xffe6be8a),
+                      ),
                     ),
-                  ),
+                    if (status == 'Upcoming' && isToday && isBefore9PM) ...[
+                      SizedBox(width: 8),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Color(0xffe6be8a),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Text(
+                          'Today',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                Flexible(
-                  child: Text(
-                    'Reservation ID: $reservationId',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                Text(
+                  'Reservation ID: $reservationId',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
                   ),
                 ),
               ],
             ),
             SizedBox(height: 10),
 
-            // Second row: Icon and Pax
+            // Booking Details
             Row(
               children: [
-                Icon(Icons.people, color: Colors.grey),
+                Icon(Icons.people, color: Color(0xffe6be8a)),
                 SizedBox(width: 5),
-                Expanded(
-                  child: Text(
-                    'Pax: $pax',
-                    style: TextStyle(fontSize: 16),
-                    overflow: TextOverflow.visible,
-                  ),
-                ),
+                Text('Pax: $pax', style: TextStyle(fontSize: 16)),
               ],
             ),
             SizedBox(height: 5),
-
-            // Third row: Icon and Area
             Row(
               children: [
-                Icon(Icons.location_on, color: Colors.grey),
+                Icon(Icons.location_on, color: Color(0xffe6be8a)),
                 SizedBox(width: 5),
-                Expanded(
-                  child: Text(
-                    'Area: $area',
-                    style: TextStyle(fontSize: 16),
-                    overflow: TextOverflow.visible,
-                  ),
-                ),
+                Text('Area: $area', style: TextStyle(fontSize: 16)),
               ],
             ),
             SizedBox(height: 5),
-
-            // Fourth row: Icon and Date
             Row(
               children: [
-                Icon(Icons.calendar_today, color: Colors.grey),
+                Icon(Icons.calendar_today, color: Color(0xffe6be8a)),
                 SizedBox(width: 5),
-                Expanded(
-                  child: Text(
-                    'Date: $date',
-                    style: TextStyle(fontSize: 16),
-                    overflow: TextOverflow.visible,
-                  ),
-                ),
+                Text('Date: $date', style: TextStyle(fontSize: 16)),
               ],
             ),
             SizedBox(height: 5),
-
-            // Fifth row: Icon and Time
             Row(
               children: [
-                Icon(Icons.access_time, color: Colors.grey),
+                Icon(Icons.access_time, color: Color(0xffe6be8a)),
                 SizedBox(width: 5),
-                Expanded(
-                  child: Text(
-                    'Time: $time',
-                    style: TextStyle(fontSize: 16),
-                    overflow: TextOverflow.visible,
-                  ),
-                ),
+                Text('Time: $time', style: TextStyle(fontSize: 16)),
               ],
             ),
+
             SizedBox(height: 15),
 
-            // Sixth row: Reminder text and Button
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Kindly check your email for reservation confirmation.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ),
-                SizedBox(width: 10),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: buttonColor,
+            // Corrected button styling
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton(
+                onPressed: buttonAction,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: buttonColor,
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(
-                    buttonText,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
                 ),
-              ],
+                child: Text(
+                  buttonText,
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
             ),
           ],
         ),
@@ -556,16 +589,14 @@ class _ReservationListPageState extends State<ReservationListPage> {
   // Function to get color based on status
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'Booking Confirmed':
-        return Colors.blue;
-      case 'Pending Confirmation':
-        return Colors.orange;
+      case 'Upcoming':
+        return Color(0xffe6be8a);
       case 'In Waiting List':
-        return Colors.grey;
+        return Color(0xffe6be8a);
       case 'Completed':
-        return Colors.green;
+        return Color(0xffe6be8a);
       case 'Cancelled':
-        return Colors.red;
+        return Color(0xffe6be8a);
       default:
         return Colors.black;
     }

@@ -7,7 +7,7 @@ import './services/api_service.dart';
 import './services/menu_service.dart';
 import './services/order_service.dart';
 import './services/cart_service.dart';
-import './pages/home_page.dart';
+import 'pages/main_menu_page.dart';
 
 void main() {
   runApp(
@@ -43,115 +43,119 @@ class MyAppState extends ChangeNotifier {}
 class LoginPage extends StatelessWidget {
   final TextEditingController _memberIdController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final FocusNode _memberIdFocusNode = FocusNode();
-  final FocusNode _passwordFocusNode = FocusNode();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 400),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Container(
-                  margin: const EdgeInsets.fromLTRB(50, 0, 50, 0),
-                  child: Image.asset("../img/Logo1.jpeg"),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Welcome',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+          child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 400),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(50, 0, 50, 0),
+                      child: Image.asset("../img/Logo1.jpeg"),
                     ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Text(
-                    'Sign in to your account',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: TextField(
-                    controller: _memberIdController,
-                    focusNode: _memberIdFocusNode,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16.0),
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Welcome back you\'ve been missed',
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 16,
+                          
+                        ),
                       ),
-                      labelText: 'Member ID',
                     ),
-                    textInputAction:
-                        TextInputAction.next, // Moves focus to next field
-                    onSubmitted: (_) {
-                      // Automatically move to next field when "Enter" is pressed
-                      FocusScope.of(context).requestFocus(_passwordFocusNode);
-                    },
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: TextField(
-                    controller: _passwordController,
-                    focusNode: _passwordFocusNode,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16.0),
+                    Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16.0),
+                            boxShadow: [
+                              BoxShadow(
+                                offset: Offset(3, 3),
+                                blurRadius: 6,
+                                color: Colors.grey.shade400,
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: _memberIdController,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16.0),
+                                borderSide: BorderSide.none, // Remove border line
+                              ),
+                              labelText: 'Member ID',
+                              prefixIcon: Icon(
+                                Icons.person_outline_rounded,
+                              ),
+                            ),
+                          ),
+                        )),
+                    Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16.0),
+                            boxShadow: [
+                              BoxShadow(
+                                offset: Offset(3, 3),
+                                blurRadius: 6,
+                                color: Colors.grey.shade400,
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: _passwordController,
+                            obscureText: true,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16.0),
+                                borderSide: BorderSide.none, // Remove border line
+                              ),
+                              labelText: 'Password',
+                              prefixIcon: Icon(
+                                Icons.lock_outline_rounded,
+                              ),
+                            ),
+                          ),
+                        )),
+
+                    Container(
+                        height: 80,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(50),
+                              backgroundColor: Color(0xff262626)),
+                          child: const Text(
+                            'Sign In',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          onPressed: () => _signIn(context),
+                        )),
+                    TextButton(
+                      onPressed: () {},
+                      child: Text(
+                        'Forget Your Password?',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      labelText: 'Password',
-                    ),
-                    textInputAction:
-                        TextInputAction.done, // Triggers form submission
-                    onSubmitted: (_) {
-                      // Trigger sign-in on "Enter" key press
-                      _signIn(context);
-                    },
-                  ),
+                    )
+                  ],
                 ),
-                Container(
-                  height: 80,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(50),
-                      backgroundColor: Color(0xff262626),
-                    ),
-                    child: const Text(
-                      'Sign In',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    onPressed: () => _signIn(context),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  child: Text(
-                    'Forget Your Password?',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                )
-              ],
-            ),
-          ),
-        ),
-      ),
+              ))),
     );
   }
 
@@ -189,7 +193,7 @@ class LoginPage extends StatelessWidget {
 
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => HomePage()),
+            MaterialPageRoute(builder: (context) => MainMenuPage()),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -198,13 +202,13 @@ class LoginPage extends StatelessWidget {
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Server error: ${response.statusCode}')),
+          SnackBar(content: Text('Your Member ID or Password is incorrect')),
         );
       }
     } catch (e) {
       print('Error details: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Connection error: $e')),
+        SnackBar(content: Text('Your Member ID or Password is incorrect')),
       );
     }
   }
