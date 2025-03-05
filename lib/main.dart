@@ -51,6 +51,7 @@ class LoginPage extends StatelessWidget {
       body: Center(
           child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 30),
+              padding: const EdgeInsets.symmetric(horizontal: 30),
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: 400),
                 child: Column(
@@ -64,6 +65,7 @@ class LoginPage extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       alignment: Alignment.centerLeft,
                       child: Text(
+                        'Welcome back you\'ve been missed',
                         'Welcome back you\'ve been missed',
                         style: TextStyle(
                           color: Colors.grey[700],
@@ -127,8 +129,34 @@ class LoginPage extends StatelessWidget {
                                 Icons.lock_outline_rounded,
                               ),
                             ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16.0),
+                            boxShadow: [
+                              BoxShadow(
+                                offset: Offset(3, 3),
+                                blurRadius: 6,
+                                color: Colors.grey.shade400,
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: _passwordController,
+                            obscureText: true,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16.0),
+                                borderSide: BorderSide.none, // Remove border line
+                              ),
+                              labelText: 'Password',
+                              prefixIcon: Icon(
+                                Icons.lock_outline_rounded,
+                              ),
+                            ),
                           ),
                         )),
+
 
                     Container(
                         height: 80,
@@ -203,11 +231,13 @@ class LoginPage extends StatelessWidget {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Your Member ID or Password is incorrect')),
+          SnackBar(content: Text('Your Member ID or Password is incorrect')),
         );
       }
     } catch (e) {
       print('Error details: $e');
       ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Your Member ID or Password is incorrect')),
         SnackBar(content: Text('Your Member ID or Password is incorrect')),
       );
     }
